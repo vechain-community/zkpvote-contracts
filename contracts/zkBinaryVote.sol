@@ -24,8 +24,8 @@ contract ZkBinaryVote {
     mapping(address => bool) public voted;
 
     address public auth;
-    uint256 gkX;
-    uint256 gkY;
+    uint256 public gkX;
+    uint256 public gkY;
 
     enum State {Init, Cast, Tally, End}
     State public state;
@@ -51,16 +51,16 @@ contract ZkBinaryVote {
         onlyAuth
         inState(State.Init)
     {
-        require(isOnCurve(x, y), "Invalid public key");
+        require(EllipticCurve.isOnCurve(x, y, AA, BB, PP), "Invalid public key");
 
         gkX = x;
         gkY = y;
         state = State.Cast;
     }
 
-    function isOnCurve(uint256 x, uint256 y) public pure returns (bool) {
-        return EllipticCurve.isOnCurve(x, y, AA, BB, PP);
-    }
+    // function isOnCurve(uint256 x, uint256 y) public pure returns (bool) {
+    //     return EllipticCurve.isOnCurve(x, y, AA, BB, PP);
+    // }
 
     function verifyBinaryZKProof(
         uint256[4] memory params, // [d1, r1, d2, r2]
