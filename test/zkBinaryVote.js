@@ -1,25 +1,27 @@
 const ZkBinaryVote = artifacts.require("ZkBinaryVote");
 
 const fs = require("fs");
+// const { assert } = require("console");
+var fpath = "/Users/zzmaczz/src/github.com/zzGHzz/zkVote/cmd/local_binary_vote/" 
 
 contract("ZkBinaryVote", async accounts => {
     it("test setAuthPubKey", async () => {
         let vote = await ZkBinaryVote.deployed();
         
-        let obj = require(__dirname + "/data/auth_public_key.json");
+        let obj = require(fpath + "auth_public_key.json");
         await vote.setAuthPubKey(web3.utils.toBN(obj["gkx"]), web3.utils.toBN(obj["gky"]), { from: accounts[0] });
 
         let gkX = await vote.gkX.call();
         let gkY = await vote.gkY.call();
 
-        assert.equal(web3.utils.toHex(gkX), obj["gkx"]);
-        assert.equal(web3.utils.toHex(gkY), obj["gky"]);
+        assert.equal(web3.utils.toHex(gkX), obj["gkx"], "gkx doesn't match");
+        assert.equal(web3.utils.toHex(gkY), obj["gky"], "gky doesn't match");
     });
 
-    it("test ballot verfication", async () => {
+    it("test ballot cast", async () => {
         let vote = await ZkBinaryVote.deployed();
         
-        let obj = require(__dirname + "/data/vote_0.json");
+        let obj = require(fpath + "vote_0.json");
         obj = obj["proof"]
         let params = [
             web3.utils.toBN(obj["d1"]),
@@ -34,7 +36,54 @@ contract("ZkBinaryVote", async accounts => {
         let a2 = [web3.utils.toBN(obj["a2x"]), web3.utils.toBN(obj["a2y"])];
         let b2 = [web3.utils.toBN(obj["b2x"]), web3.utils.toBN(obj["b2y"])];
 
-        let res = await vote.verifyBinaryZKProof(params, ga, y, a1, b1, a2, b2);
-        assert.equal(res, true);
+        // let res = await vote.verifyBinaryZKP.call(ga, y, params, a1, b1, a2, b2, {from: accounts[1]});
+        // assert.equal(res, true);
+
+        let tx = await vote.cast(ga, y, params, a1, b1, a2, b2, {from: accounts[1]});
+        // console.log(tx)
+        assert.equal(tx.logs[0].args["from"], accounts[1]);
+        assert.equal(
+            tx.logs[0].args["ballotHash"], 
+            web3.utils.sha3(web3.eth.abi.encodeParameters(
+                ['uint256','uint256','uint256','uint256'],
+                [obj["gax"], obj["gay"],obj["yx"], obj["yy"]])),
+            "event doesn't match"
+        );
+    });
+
+    it("test ballot verification", async () => {
+        let vote = await ZkBinaryVote.deployed();
+        let res = await vote.verifyBallot.call(accounts[1]);
+        assert.equal(res, true, "should return true");
+    });
+
+    it("test submitting tally results", async () => {
+        let vote = await ZkBinaryVote.deployed();
+        
+        let obj = require(fpath + "tally.json");
+
+        let V = obj["v"];
+        let X = [obj["xx"],obj["xy"]];
+        let Y = [obj["yx"],obj["yy"]];
+
+        pf = obj["proof"]; 
+        let H = [pf["hx"], pf["hy"]];
+        let t = [pf["tx"], pf["ty"]];
+        let r = pf["r"];
+
+        await vote.invalidateBallots([]);
+        let state = await vote.state.call();
+        // console.log(state);
+        assert.equal(state, 2, "should be State.Tally");
+
+        let tx = await vote.tally(V, X, Y, H, t, r);
+        assert.equal(tx.logs[0].args['V'], V, "V");
+        assert.equal(
+            tx.logs[0].args['tallyHash'], 
+            web3.utils.sha3(web3.eth.abi.encodeParameters(['uint256[2]', 'uint256[2]'], [X, Y])),
+            "tallyHash"
+        );
+
+        let res = await vote.verifyTallyRes()
     });
 });
