@@ -152,15 +152,13 @@ contract ZkBinaryVote {
             t:  _t, 
             r:  _r});
 
+        state = State.End;
+
         emit Tally(_V, keccak256(abi.encodePacked(_X, _Y)));
     }
 
-    function terminate() public onlyAuth() inState(State.Tally) {
-        state = State.End;
-    }
-
     // Verify the ballot cast by the input address
-    function verifyBallot(address a) public view returns (bool) {
+    function verifyBallot(address a) public view inState(State.End) returns (bool) {
         require(checkVoter[a], "The input address hasn't cast a ballot");
         
         return verifyBinaryZKP(
@@ -175,7 +173,7 @@ contract ZkBinaryVote {
         );
     }
 
-    function totalValidBallots() public view returns (uint) {
+    function totalValidBallots() public view inState(State.End) returns (uint) {
         uint N = voters.length;
         for(uint i = 0; i < voters.length; i++) {
             if(checkInvalidBallot[voters[i]]) {
@@ -185,7 +183,7 @@ contract ZkBinaryVote {
         return N;
     }
 
-    function verifyHAndY() public view returns (bool) {
+    function verifyHAndY() public view inState(State.End) returns (bool) {
         uint256[2] memory _H;
         uint256[2] memory _Y;
         address a;
@@ -207,7 +205,7 @@ contract ZkBinaryVote {
         }
     }
 
-    function verifyTallyRes() public view returns (bool) {
+    function verifyTallyRes() public view inState(State.End) returns (bool) {
         uint256[2] memory p;
         
         // check Y = X * g^V
