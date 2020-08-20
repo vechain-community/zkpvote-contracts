@@ -2,23 +2,22 @@ const ZkBinaryVote = artifacts.require("ZkBinaryVote");
 
 const fs = require("fs");
 // const { assert } = require("console");
-var fpath = "/Users/zzmaczz/src/github.com/zzGHzz/zkVote/cmd/local_binary_vote/" 
+var fpath = __dirname + "/data/"
 
 contract("ZkBinaryVote", async accounts => {
-    it("test setAuthPubKey", async () => {
+    it("Authority sets its public key", async () => {
         let vote = await ZkBinaryVote.deployed();
         
         let obj = require(fpath + "auth_public_key.json");
         await vote.setAuthPubKey(web3.utils.toBN(obj["gkx"]), web3.utils.toBN(obj["gky"]), { from: accounts[0] });
 
-        let gkX = await vote.gkX.call();
-        let gkY = await vote.gkY.call();
+        let gk = await vote.gk.call();
 
-        assert.equal(web3.utils.toHex(gkX), obj["gkx"], "gkx doesn't match");
-        assert.equal(web3.utils.toHex(gkY), obj["gky"], "gky doesn't match");
+        assert.equal(web3.utils.toHex(gk["0"]), obj["gkx"], "gkX doesn't match");
+        assert.equal(web3.utils.toHex(gk["1"]), obj["gky"], "gkY doesn't match");
     });
 
-    it("test ballot cast", async () => {
+    it("cast valid & invalid ballots", async () => {
         let vote = await ZkBinaryVote.deployed();
         
         let obj = require(fpath + "vote_0.json");
