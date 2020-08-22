@@ -45,12 +45,12 @@ contract ZkBinaryVote {
     uint256[2] gk; // authority-generated public key
 
     // Ballots
-    address[] public voters; // addresses of the accounts that have cast a ballot
+    address[] voters; // addresses of the accounts that have cast a ballot
     mapping(address => bool) checkBallot; // mapping used to check whether an account has cast a ballot
     mapping(address => Ballot) ballots;
 
     // Data uploaded by authority
-    address[] public invalidBallots; // addresses of the accounts that have cast an invalid ballot
+    address[] public nullVoters; // addresses of the accounts that have cast an invalid ballot
     mapping(address => bool) checkInvalidBallot; // mapping used to check whether an account has cast an invalid ballot
     TallyRes tallyRes; // outputs of the tally carried by authority off-chain
 
@@ -105,15 +105,6 @@ contract ZkBinaryVote {
         emit RegAuthPubKey(_gk[0], _gk[1]);
     }
 
-    function getAuthPubKey() 
-        public 
-        view 
-        afterState(State.Init) 
-        returns (uint256[2] memory) 
-    {
-        return gk;
-    }
-
     // Due to high gas cost, ballots will be verified by the authority off-chain
     // Cast only save ballots
     function cast(
@@ -151,23 +142,8 @@ contract ZkBinaryVote {
         state = State.End;
     }
 
-    // Authority sets the addresses of the invalid ballots
-    function setInvalidBallots(address[] memory _invalidBallots)
-        public
-        onlyAuth()
-        inState(State.Tally)
-    {
-        for (uint256 i = 0; i < _invalidBallots.length; i++) {
-            address a = _invalidBallots[i];
-
-            if (checkBallot[a] && !checkInvalidBallot[a]) {
-                checkInvalidBallot[a] = true;
-                invalidBallots.push(a);
-            }
-        }
-    }
-
     function setTallyRes(
+        address[] memory _nullVoters,
         uint256 _V,
         uint256[2] memory _X,
         uint256[2] memory _Y,
@@ -175,6 +151,15 @@ contract ZkBinaryVote {
         uint256[2] memory _t,
         uint256 _r
     ) public onlyAuth() inState(State.Tally) {
+        for (uint256 i = 0; i < _nullVoters.length; i++) {
+            address a = _nullVoters[i];
+
+            if (checkBallot[a] && !checkInvalidBallot[a]) {
+                checkInvalidBallot[a] = true;
+                nullVoters.push(a);
+            }
+        }
+        
         tallyRes = TallyRes({V: _V, X: _X, Y: _Y, H: _H, t: _t, r: _r});
 
         emit Tally(_V, keccak256(abi.encodePacked(_X, _Y)));
@@ -197,23 +182,8 @@ contract ZkBinaryVote {
             );
     }
 
-    function totalValidBallots()
-        public
-        view
-        inState(State.End)
-        returns (uint256)
-    {
-        uint256 N = voters.length;
-        for (uint256 i = 0; i < voters.length; i++) {
-            if (checkInvalidBallot[voters[i]]) {
-                N = N - 1;
-            }
-        }
-        return N;
-    }
-
-    // Verify values of tallyRes.H and tallyRes.Y
-    function verifyHAndY() public view inState(State.End) returns (bool) {
+    // Verify H = prod_i h_i = prod_i g^a_i and Y = prod_i y_i
+    function verifyHAndY() internal view returns (bool) {
         uint256[2] memory _H;
         uint256[2] memory _Y;
         address a;
@@ -251,10 +221,16 @@ contract ZkBinaryVote {
         ) {
             return false;
         }
+
+        return true;
     }
 
-    // Verify the tally result
-    function verifyTallyRes() public view inState(State.End) returns (bool) {
+    // Verify result
+    function verifyTallyRes() external view inState(State.End) returns (bool) {
+        if (!verifyHAndY()) {
+            return false;
+        }
+
         uint256[2] memory p;
 
         // check Y = X * g^V
@@ -280,6 +256,10 @@ contract ZkBinaryVote {
                 tallyRes.r
             );
     }
+
+    ////////////////////////////////
+    // ZKP METHODS
+    ////////////////////////////////
 
     function verifyBinaryZKP(
         address data,
@@ -397,9 +377,25 @@ contract ZkBinaryVote {
         return true;
     }
 
-    // Get a ballot indexed by address
+    ////////////////////////////////////
+    // GET METHODS
+    ////////////////////////////////////
+
+    function getAuthPubKey() 
+        external 
+        view 
+        afterState(State.Init) 
+        returns (uint256[2] memory) 
+    {
+        return gk;
+    }
+
+    function getVoters() external view returns (address[] memory) {
+        return voters;
+    }
+
     function getBallot(address a)
-        public
+        external
         view
         returns (
             uint256[2] memory,
@@ -422,6 +418,15 @@ contract ZkBinaryVote {
             ballots[a].a2,
             ballots[a].b2
         );
+    }
+
+    function getValidBallotNum()
+        external
+        view
+        inState(State.End)
+        returns (uint256)
+    {
+        return voters.length - nullVoters.length;
     }
 
     event RegAuthPubKey(uint256 indexed gkX, uint256 indexed gkY);
