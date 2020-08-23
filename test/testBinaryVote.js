@@ -1,9 +1,9 @@
-const ZkBinaryVote = artifacts.require("ZkBinaryVote");
+const BinaryVote = artifacts.require("BinaryVote");
 const fs = require("fs");
 
-contract("zkBinaryVote", async (accounts) => {
+contract("BinaryVote", async (accounts) => {
     it("test run", async () => {
-        let vote = await ZkBinaryVote.deployed();
+        let vote = await BinaryVote.deployed();
         const fpath = __dirname + "/data/"
 
         //////////////////////////////
@@ -12,10 +12,11 @@ contract("zkBinaryVote", async (accounts) => {
         let obj = require(fpath + "auth-pub-key.json");
         await vote.setAuthPubKey([obj.gkx, obj.gky], { from: accounts[0] });
 
-        const gk = await vote.getAuthPubKey.call();
+        const gkx = await vote.gk.call(0);
+        const gky = await vote.gk.call(1);
 
-        assert.equal(web3.utils.toHex(gk[0]), obj.gkx, "gkX doesn't match");
-        assert.equal(web3.utils.toHex(gk[1]), obj.gky, "gkY doesn't match");
+        assert.equal(web3.utils.toHex(gkx), obj.gkx, "gkX doesn't match");
+        assert.equal(web3.utils.toHex(gky), obj.gky, "gkY doesn't match");
 
         ////////////////////////////////////////////////////////////////////////////
         // Ballot casting
@@ -44,7 +45,7 @@ contract("zkBinaryVote", async (accounts) => {
                 web3.utils.sha3(web3.eth.abi.encodeParameters(
                     ['uint256', 'uint256', 'uint256', 'uint256'],
                     [ga[0], ga[1], y[0], y[1]])),
-                "Error in castin ballot (" + i + ")"
+                "Error in casting ballot (" + i + ")"
             );
         }
 
@@ -52,13 +53,14 @@ contract("zkBinaryVote", async (accounts) => {
         // download ballots for off-chain verification/tallying
         /////////////////////////////////////////////////////////
         const dl = [];
-        const voters = await vote.getVoters.call();
-        for (i = 0; i < voters.length; i++) {
-            const raw = await vote.getBallot.call(voters[i]);
+        const n = await vote.getNumVoter(id);
+        for (i = 0; i < n; i++) {
+            const addr = await vc.getVoter(id, i);
+            const raw = await vc.getBallot(id, addr);
             obj = utils.raw2norm(raw);
-            obj.proof.data = voters[i];
-            obj.proof.gxk = web3.utils.toHex(gk[0]);
-            obj.proof.gky = web3.utils.toHex(gk[1]);
+            obj.proof.data = addr;
+            obj.proof.gxk = web3.utils.toHex(gkx);
+            obj.proof.gky = web3.utils.toHex(gky);
             dl.push(obj)
         }
 
@@ -67,7 +69,7 @@ contract("zkBinaryVote", async (accounts) => {
         /////////////////////////////////////
         // Authority uploads tally result
         /////////////////////////////////////
-        await vote.beginTally({from: accounts[0]});
+        await vote.beginTally({ from: accounts[0] });
 
         const invalid_addr = require(fpath + "invalid-bin-addr.json");
         const res = require(fpath + "bin-tally-res.json");
@@ -79,7 +81,7 @@ contract("zkBinaryVote", async (accounts) => {
             [res.proof.hx, res.proof.hy],
             [res.proof.tx, res.proof.ty],
             res.proof.r,
-            {from: accounts[0]}
+            { from: accounts[0] }
         );
         // check event
         assert.equal(tx.logs[0].args.V, res.v);
@@ -94,10 +96,10 @@ contract("zkBinaryVote", async (accounts) => {
         /////////////////////////////
         // Verify tally result
         /////////////////////////////
-        await vote.endTally({from: accounts[0]});
+        await vote.endTally({ from: accounts[0] });
 
         const bRes = await vote.verifyTallyRes();
-        assert.equal(bRes, true, "Invalid tally result")
+        assert.equal(bRes, true, "Invalid tally result");
     });
 });
 

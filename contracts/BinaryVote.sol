@@ -2,20 +2,14 @@ pragma solidity >=0.5.3 <0.7.0;
 
 import "./EllipticCurve.sol";
 
-contract ZkBinaryVote {
+contract BinaryVote {
     // P245 curve constants
-    uint256
-        public constant GX = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296;
-    uint256
-        public constant GY = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5;
-    uint256
-        public constant PP = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff;
-    uint256
-        public constant NN = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551;
-    uint256
-        public constant AA = 0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc;
-    uint256
-        public constant BB = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b;
+    uint256 constant GX = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296;
+    uint256 constant GY = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5;
+    uint256 constant PP = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff;
+    uint256 constant NN = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551;
+    uint256 constant AA = 0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc;
+    uint256 constant BB = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b;
 
     // content of a ballot
     struct Ballot {
@@ -41,7 +35,7 @@ contract ZkBinaryVote {
     }
 
     // Authority
-    address public auth; // account address
+    address auth; // account address
     uint256[2] gk; // authority-generated public key
 
     // Ballots
@@ -50,7 +44,7 @@ contract ZkBinaryVote {
     mapping(address => Ballot) ballots;
 
     // Data uploaded by authority
-    address[] public nullVoters; // addresses of the accounts that have cast an invalid ballot
+    address[] nullVoters; // addresses of the accounts that have cast an invalid ballot
     mapping(address => bool) checkInvalidBallot; // mapping used to check whether an account has cast an invalid ballot
     TallyRes tallyRes; // outputs of the tally carried by authority off-chain
 
@@ -60,11 +54,11 @@ contract ZkBinaryVote {
         Tally, // start after authority calls function beginTally()
         End // ends after authority calls function endTally()
     }
-    State public state;
+    State state;
 
     modifier onlyAuth() {
         // Modifier
-        require(msg.sender == auth, "Only authority can call this.");
+        require(tx.origin == auth, "Only authority can call this.");
         _;
     }
 
@@ -84,13 +78,13 @@ contract ZkBinaryVote {
     }
 
     constructor() public {
-        auth = msg.sender;
+        auth = tx.origin;
         state = State.Init;
     }
 
     // Authority sets its public key and starts the casting period
-    function setAuthPubKey(uint256[2] memory _gk)
-        public
+    function setAuthPubKey(uint256[2] calldata _gk)
+        external
         onlyAuth
         inState(State.Init)
     {
@@ -108,20 +102,20 @@ contract ZkBinaryVote {
     // Due to high gas cost, ballots will be verified by the authority off-chain
     // Cast only save ballots
     function cast(
-        uint256[2] memory _h,
-        uint256[2] memory _y,
-        uint256[4] memory _params,
-        uint256[2] memory _a1,
-        uint256[2] memory _b1,
-        uint256[2] memory _a2,
-        uint256[2] memory _b2
-    ) public inState(State.Cast) {
-        if (!checkBallot[msg.sender]) {
-            checkBallot[msg.sender] = true;
-            voters.push(msg.sender);
+        uint256[2] calldata _h,
+        uint256[2] calldata _y,
+        uint256[4] calldata _params,
+        uint256[2] calldata _a1,
+        uint256[2] calldata _b1,
+        uint256[2] calldata _a2,
+        uint256[2] calldata _b2
+    ) external inState(State.Cast) {
+        if (!checkBallot[tx.origin]) {
+            checkBallot[tx.origin] = true;
+            voters.push(tx.origin);
         }
 
-        ballots[msg.sender] = Ballot({
+        ballots[tx.origin] = Ballot({
             h: _h,
             y: _y,
             params: _params,
@@ -131,26 +125,26 @@ contract ZkBinaryVote {
             b2: _b2
         });
 
-        emit Cast(msg.sender, keccak256(abi.encode(_h, _y)));
+        emit Cast(tx.origin, keccak256(abi.encode(_h, _y)));
     }
 
-    function beginTally() public onlyAuth() inState(State.Cast) {
+    function beginTally() external onlyAuth() inState(State.Cast) {
         state = State.Tally;
     }
 
-    function endTally() public onlyAuth() inState(State.Tally) {
+    function endTally() external onlyAuth() inState(State.Tally) {
         state = State.End;
     }
 
     function setTallyRes(
-        address[] memory _nullVoters,
+        address[] calldata _nullVoters,
         uint256 _V,
-        uint256[2] memory _X,
-        uint256[2] memory _Y,
-        uint256[2] memory _H,
-        uint256[2] memory _t,
+        uint256[2] calldata _X,
+        uint256[2] calldata _Y,
+        uint256[2] calldata _H,
+        uint256[2] calldata _t,
         uint256 _r
-    ) public onlyAuth() inState(State.Tally) {
+    ) external onlyAuth() inState(State.Tally) {
         for (uint256 i = 0; i < _nullVoters.length; i++) {
             address a = _nullVoters[i];
 
@@ -159,14 +153,14 @@ contract ZkBinaryVote {
                 nullVoters.push(a);
             }
         }
-        
+
         tallyRes = TallyRes({V: _V, X: _X, Y: _Y, H: _H, t: _t, r: _r});
 
-        emit Tally(_V, keccak256(abi.encodePacked(_X, _Y)));
+        emit Tally(_V, keccak256(abi.encode(_X, _Y)));
     }
 
     // Verify the ballot cast by the input address
-    function verifyBallot(address a) public view returns (bool) {
+    function verifyBallot(address a) external view returns (bool) {
         require(checkBallot[a], "Ballot does not exist");
 
         return
@@ -274,7 +268,7 @@ contract ZkBinaryVote {
         uint256[2] memory p1;
         uint256[2] memory p2;
 
-        // hash(msg.sender, ga, y, a1, b1, a2, b2) == d1 + d2 (mod n)
+        // hash(data, ga, y, a1, b1, a2, b2) == d1 + d2 (mod n)
         if (
             uint256(sha256(abi.encodePacked(data, h, y, a1, b1, a2, b2))) !=
             addmod(params[0], params[2], NN)
@@ -380,18 +374,16 @@ contract ZkBinaryVote {
     ////////////////////////////////////
     // GET METHODS
     ////////////////////////////////////
-
-    function getAuthPubKey() 
-        external 
-        view 
-        afterState(State.Init) 
-        returns (uint256[2] memory) 
-    {
+    function getAuthPubKey() external view returns (uint256[2] memory) {
         return gk;
     }
+    
+    function getNumVoter() external view returns (uint256) {
+        return voters.length;
+    }
 
-    function getVoters() external view returns (address[] memory) {
-        return voters;
+    function getVoter(uint256 i) external view returns (address) {
+        return voters[i];
     }
 
     function getBallot(address a)

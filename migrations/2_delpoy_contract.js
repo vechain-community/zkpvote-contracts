@@ -1,8 +1,12 @@
-const EllipticCurve = artifacts.require("EllipticCurve");
-const ZkBinaryVote = artifacts.require("ZkBinaryVote");
+const BinaryVote = artifacts.require("BinaryVote");
+const VoteCreator = artifacts.require("VoteCreator.sol");
+const VotingContract = artifacts.require("VotingContract");
 
 module.exports = function (deployer) {
-    deployer.deploy(EllipticCurve);
-    deployer.link(EllipticCurve, ZkBinaryVote);
-    deployer.deploy(ZkBinaryVote);
+    deployer.deploy(BinaryVote);
+
+    deployer.deploy(VoteCreator)
+    .then(() => VoteCreator.deployed())
+    .then(() => deployer.deploy(VotingContract, VoteCreator.address))
+    .then(() => VotingContract.deployed());
 };
