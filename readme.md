@@ -4,7 +4,7 @@
 
 This project implements the voting protocol described in `protocol.md`. There are three contracts:
 
-* `BinaryVote` - implements a single vote where voters are only allowed to cast a **YES** or **NO** ballot;
+* `BinaryVote` - implements a single vote where voters are only allowed to cast a **YES** or **NO** ballot. Note that the contract uses the [P256 or Secp256r1](https://www.secg.org/sec2-v2.pdf) elliptic curve.
 * `VotingContract` - responsible for hosting multiple votes and executing requests from users to call functions of a deployed `BinaryVote` contract.
 * `VoteCreator` - responsible for creating new votes through deploying `BinaryVote` and registering the instance in `VotingContract`.
 
