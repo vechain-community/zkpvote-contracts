@@ -125,10 +125,10 @@ contract("VotingContract", async (accounts) => {
 var utils = {
     raw2norm: function (raw) {
         const p = {
-            gax: web3.utils.toHex(raw["0"][0]),
-            gay: web3.utils.toHex(raw["0"][1]),
-            yx: web3.utils.toHex(raw["1"][0]),
-            yy: web3.utils.toHex(raw["1"][1]),
+            // gax: web3.utils.toHex(raw["0"][0]),
+            // gay: web3.utils.toHex(raw["0"][1]),
+            // yx: web3.utils.toHex(raw["1"][0]),
+            // yy: web3.utils.toHex(raw["1"][1]),
             d1: web3.utils.toHex(raw["2"][0]),
             r1: web3.utils.toHex(raw["2"][1]),
             d2: web3.utils.toHex(raw["2"][2]),
