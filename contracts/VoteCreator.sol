@@ -6,10 +6,13 @@ contract VotingContractInterface {
     function newBinaryVote(address auth, address voteContract) external;
 }
 
+/// @author Peter Zhou
+/// @title Contract for creating instances of contract BinaryVote
 contract VoteCreator {
     address public owner;
     address public c;
 
+    /// Constructor
     constructor() public {
         owner = msg.sender;
     }
@@ -19,11 +22,14 @@ contract VoteCreator {
         _;
     }
 
+    /// Connect to the deployed voting contract and give up the ownership
+    /// @param _c address of the deployed voting contract
     function setVotingContract(address _c) external onlyOwner() {
         c = _c;
         owner = address(0);
     }
 
+    /// Create an instance of contract BinaryVote and register it in the deployed voting contract
     function newBinaryVote() external {
         require(uint256(c) > 0, "Voting contract has not been set");
 

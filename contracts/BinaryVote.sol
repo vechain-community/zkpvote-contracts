@@ -2,6 +2,8 @@ pragma solidity >=0.5.3 <0.7.0;
 
 import "./EllipticCurve.sol";
 
+/// @author Peter Zhou
+/// @title Contract for realizing a yes/no vote 
 contract BinaryVote {
     // P245 curve constants
     uint256 constant GX = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296;
@@ -82,7 +84,8 @@ contract BinaryVote {
         state = State.Init;
     }
 
-    // Authority sets its public key and starts the casting period
+    /// Set public key by the authority
+    /// @param _gk Public key
     function setAuthPubKey(uint256[2] calldata _gk)
         external
         onlyAuth
@@ -99,8 +102,14 @@ contract BinaryVote {
         emit RegAuthPubKey(_gk[0], _gk[1]);
     }
 
-    // Due to high gas cost, ballots will be verified by the authority off-chain
-    // Cast only save ballots
+    /// Cast a yes/no ballot
+    /// @param _h g^a
+    /// @param _y (g^ka)(g^v) v\in{0,1}
+    /// @param _params part of the zk proof
+    /// @param _a1 part of the zk proof
+    /// @param _b1 part of the zk proof
+    /// @param _a2 part of the zk proof
+    /// @param _b2 part of the zk proof
     function cast(
         uint256[2] calldata _h,
         uint256[2] calldata _y,
@@ -128,14 +137,24 @@ contract BinaryVote {
         emit Cast(tx.origin, keccak256(abi.encode(_h, _y)));
     }
 
+    /// Start tally by the authority
     function beginTally() external onlyAuth() inState(State.Cast) {
         state = State.Tally;
     }
 
+    /// End tally by the authority
     function endTally() external onlyAuth() inState(State.Tally) {
         state = State.End;
     }
 
+    /// Upload the tally result
+    /// @param _nullVoters addresses of the voters whose ballots are invalid
+    /// @param _V Total number of yes votes
+    /// @param _X prod_i(h_i) 
+    /// @param _Y prod_i(y_i)
+    /// @param _H part of the zk proof
+    /// @param _t part of the zk proof
+    /// @param _r part of the zk proof
     function setTallyRes(
         address[] calldata _nullVoters,
         uint256 _V,
@@ -159,7 +178,9 @@ contract BinaryVote {
         emit Tally(_V, keccak256(abi.encode(_X, _Y)));
     }
 
-    // Verify the ballot cast by the input address
+    /// Verify a cast ballot
+    /// @param a address of the account used to cast the ballot
+    /// @return true or false
     function verifyBallot(address a) external view returns (bool) {
         require(checkBallot[a], "Ballot does not exist");
 
@@ -176,7 +197,113 @@ contract BinaryVote {
             );
     }
 
-    // Verify H = prod_i h_i = prod_i g^a_i and Y = prod_i y_i
+    /// Verify the tally result after the tally is ended by the authority
+    /// @return true or false
+    function verifyTallyRes() external view inState(State.End) returns (bool) {
+        if (!verifyHAndY()) {
+            return false;
+        }
+
+        uint256[2] memory p;
+
+        // check Y = X * g^V
+        (p[0], p[1]) = EllipticCurve.ecMul(tallyRes.V, GX, GY, AA, PP);
+        (p[0], p[1]) = EllipticCurve.ecAdd(
+            p[0],
+            p[1],
+            tallyRes.X[0],
+            tallyRes.X[1],
+            AA,
+            PP
+        );
+        if (p[0] != tallyRes.Y[0] || p[1] != tallyRes.Y[1]) {
+            return false;
+        }
+
+        return
+            verifyECFSProof(
+                auth,
+                tallyRes.H,
+                tallyRes.X,
+                tallyRes.t,
+                tallyRes.r
+            );
+    }
+
+    /// Get authority public key
+    /// @return Public key
+    function getAuthPubKey() external view returns (uint256[2] memory) {
+        return gk;
+    }
+    
+    /// Get the number of different accounts that have been used to cast a ballot
+    /// @return Number of accounts
+    function getNumVoter() external view returns (uint256) {
+        return voters.length;
+    }
+
+    /// Get the address of a particular account used to cast a ballot
+    /// @param i Index
+    /// @return Account address
+    function getVoter(uint256 i) external view returns (address) {
+        return voters[i];
+    }
+
+    /// Get the number of accounts used to cast ballots are invalidated by the authority
+    /// @return Number of accounts
+    function getNumNullVoter() external view returns (uint256) {
+        return nullVoters.length;
+    }
+
+    /// Get the address of a particular account used to cast an invalid ballot
+    /// @param i Index
+    /// @return Account address
+    function getNullVoter(uint256 i) external view returns (address) {
+        return nullVoters[i];
+    }
+
+    /// Get a ballot stored in the contract indexed by the account address
+    /// @param a account address
+    /// @return ballot data
+    function getBallot(address a)
+        external
+        view
+        returns (
+            uint256[2] memory,
+            uint256[2] memory,
+            uint256[4] memory,
+            uint256[2] memory,
+            uint256[2] memory,
+            uint256[2] memory,
+            uint256[2] memory
+        )
+    {
+        require(checkBallot[a], "Ballot does not exist");
+
+        return (
+            ballots[a].h,
+            ballots[a].y,
+            ballots[a].params,
+            ballots[a].a1,
+            ballots[a].b1,
+            ballots[a].a2,
+            ballots[a].b2
+        );
+    }
+
+    /// Get the total number of valid ballots stored in the contact
+    /// @return total number
+    function getValidBallotNum()
+        external
+        view
+        inState(State.End)
+        returns (uint256)
+    {
+        return voters.length - nullVoters.length;
+    }
+
+    /// Verify H = prod_i(h_i) and Y = prod_i(y_i)
+    /// @return true or false
     function verifyHAndY() internal view returns (bool) {
         uint256[2] memory _H;
         uint256[2] memory _Y;
@@ -219,42 +346,17 @@ contract BinaryVote {
         return true;
     }
 
-    // Verify result
-    function verifyTallyRes() external view inState(State.End) returns (bool) {
-        if (!verifyHAndY()) {
-            return false;
-        }
-
-        uint256[2] memory p;
-
-        // check Y = X * g^V
-        (p[0], p[1]) = EllipticCurve.ecMul(tallyRes.V, GX, GY, AA, PP);
-        (p[0], p[1]) = EllipticCurve.ecAdd(
-            p[0],
-            p[1],
-            tallyRes.X[0],
-            tallyRes.X[1],
-            AA,
-            PP
-        );
-        if (p[0] != tallyRes.Y[0] || p[1] != tallyRes.Y[1]) {
-            return false;
-        }
-
-        return
-            verifyECFSProof(
-                auth,
-                tallyRes.H,
-                tallyRes.X,
-                tallyRes.t,
-                tallyRes.r
-            );
-    }
-
-    ////////////////////////////////
-    // ZKP METHODS
-    ////////////////////////////////
-
+    /// Verify the zk proof within a ballot. The proof is used to prove that
+    /// the encrypted value in the ballot is either 0 (NO) or 1 (YES).
+    /// @param data address of the account used to cast the ballot
+    /// @param h
+    /// @param y
+    /// @param params
+    /// @param a1
+    /// @param b1
+    /// @param a2
+    /// @param b2
+    /// @return true or false
     function verifyBinaryZKP(
         address data,
         uint256[2] storage h,
@@ -340,7 +442,15 @@ contract BinaryVote {
         return true;
     }
 
-    // ECFS - proving the knowledge of x s.t. h^x = y
+    /// Verify the zk proof within the tally result. The proof is used to prove that
+    /// who uploads the tally result knows the private key associated with authority's 
+    /// public key. 
+    /// @param data address of the account the authority uses to interact with the cotract
+    /// @param h
+    /// @param y
+    /// @param t
+    /// @param r
+    /// @return true or false
     function verifyECFSProof(
         address data,
         uint256[2] storage h,
@@ -369,64 +479,6 @@ contract BinaryVote {
         }
 
         return true;
-    }
-
-    ////////////////////////////////////
-    // GET METHODS
-    ////////////////////////////////////
-    function getAuthPubKey() external view returns (uint256[2] memory) {
-        return gk;
-    }
-    
-    function getNumVoter() external view returns (uint256) {
-        return voters.length;
-    }
-
-    function getVoter(uint256 i) external view returns (address) {
-        return voters[i];
-    }
-
-    function getNumNullVoter() external view returns (uint256) {
-        return nullVoters.length;
-    }
-
-    function getNullVoter(uint256 i) external view returns (address) {
-        return nullVoters[i];
-    }
-
-    function getBallot(address a)
-        external
-        view
-        returns (
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[4] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory
-        )
-    {
-        require(checkBallot[a], "Ballot does not exist");
-
-        return (
-            ballots[a].h,
-            ballots[a].y,
-            ballots[a].params,
-            ballots[a].a1,
-            ballots[a].b1,
-            ballots[a].a2,
-            ballots[a].b2
-        );
-    }
-
-    function getValidBallotNum()
-        external
-        view
-        inState(State.End)
-        returns (uint256)
-    {
-        return voters.length - nullVoters.length;
     }
 
     event RegAuthPubKey(uint256 indexed gkX, uint256 indexed gkY);
