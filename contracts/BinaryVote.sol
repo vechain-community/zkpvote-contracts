@@ -386,6 +386,14 @@ contract BinaryVote {
         return voters[i];
     }
 
+    function getNumNullVoter() external view returns (uint256) {
+        return nullVoters.length;
+    }
+
+    function getNullVoter(uint256 i) external view returns (address) {
+        return nullVoters[i];
+    }
+
     function getBallot(address a)
         external
         view

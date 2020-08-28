@@ -37,6 +37,10 @@ contract BinaryVoteInterface {
 
     function getVoter(uint256 i) external view returns (address);
 
+    function getNumNullVoter() external view returns (uint256);
+
+    function getNullVoter(uint256 i) external view returns (address);
+
     function getBallot(address a)
         external
         view
@@ -149,6 +153,15 @@ contract VotingContract {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
+        uint256 n = c.getNumNullVoter();
+        address a;
+        for(uint256 i = 0; i < n; i++) {
+            a = c.getNullVoter(i);
+            if(c.verifyBallot(a)) {
+                return false;
+            }
+        }
+
         return c.verifyTallyRes();
     }
 
@@ -166,6 +179,20 @@ contract VotingContract {
         uint256[2] memory gk = c.getAuthPubKey();
 
         return gk;
+    }
+
+    function getNumNullVoter(bytes32 id) external view returns (uint256) {
+        require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
+        BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
+
+        return c.getNumNullVoter();
+    }
+
+    function getNullVoter(bytes32 id, uint256 i) external view returns (address) {
+        require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
+        BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
+
+        return c.getNullVoter(i);
     }
 
     function getNumVoter(bytes32 id) external view returns (uint256) {

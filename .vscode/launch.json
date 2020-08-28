@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Current TS File",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "${relativeFile}"
+            ],
+            "runtimeArgs": [
+                "-r",
+                "ts-node/register"
+            ],
+            "cwd": "${workspaceRoot}",
+            "protocol": "inspector",
+            "internalConsoleOptions": "openOnSessionStart",
+            "env": {
+                "NODE_PATH": "/usr/local/lib/node_modules/"
+            }
+        }
+    ]
+}

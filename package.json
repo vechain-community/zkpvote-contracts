@@ -1,0 +1,28 @@
+{
+  "name": "zkvotecontract",
+  "version": "1.0.0",
+  "description": "A privacy-preserved voting protocol",
+  "main": "",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@vechain/connex-driver": "^1.2.1",
+    "@vechain/connex-framework": "^1.1.4",
+    "myvetools": "^1.0.11"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zzGHzz/zkVoteContract.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zzGHzz/zkVoteContract/issues"
+  },
+  "homepage": "https://github.com/zzGHzz/zkVoteContract#readme"
+}
