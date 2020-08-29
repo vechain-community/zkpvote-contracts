@@ -1,32 +1,32 @@
 pragma solidity >=0.5.3 <0.7.0;
 
-// import "./ECLibInterface(lib).sol";
-contract ECLibInterface {
-    function ecAdd(
-        uint256 _x1,
-        uint256 _y1,
-        uint256 _x2,
-        uint256 _y2,
-        uint256 _aa,
-        uint256 _pp
-    ) external pure returns (uint256, uint256);
+import "./EllipticCurve.sol";
+// contract ECLibInterface {
+//     function ecAdd(
+//         uint256 _x1,
+//         uint256 _y1,
+//         uint256 _x2,
+//         uint256 _y2,
+//         uint256 _aa,
+//         uint256 _pp
+//     ) external pure returns (uint256, uint256);
 
-    function ecMul(
-        uint256 _k,
-        uint256 _x,
-        uint256 _y,
-        uint256 _aa,
-        uint256 _pp
-    ) external pure returns (uint256, uint256);
+//     function ecMul(
+//         uint256 _k,
+//         uint256 _x,
+//         uint256 _y,
+//         uint256 _aa,
+//         uint256 _pp
+//     ) external pure returns (uint256, uint256);
 
-    function isOnCurve(
-        uint256 _x,
-        uint256 _y,
-        uint256 _aa,
-        uint256 _bb,
-        uint256 _pp
-    ) external pure returns (bool);
-}
+//     function isOnCurve(
+//         uint256 _x,
+//         uint256 _y,
+//         uint256 _aa,
+//         uint256 _bb,
+//         uint256 _pp
+//     ) external pure returns (bool);
+// }
 
 /// @title Binary Vote Contract
 /// @author Peter Zhou
@@ -63,7 +63,7 @@ contract BinaryVote {
         uint256 r;
     }
 
-    address private lib;
+    // address private lib;
 
     // Authority
     address private auth; // account address
@@ -108,11 +108,15 @@ contract BinaryVote {
         _;
     }
 
-    constructor(address _lib) public {
-        require(uint256(_lib) > 0, "Invalid EC library address");
+    // constructor(address _lib) public {
+    //     require(uint256(_lib) > 0, "Invalid EC library address");
 
+    //     auth = tx.origin;
+    //     lib = _lib;
+    //     state = State.Init;
+    // }
+    constructor() public {
         auth = tx.origin;
-        lib = _lib;
         state = State.Init;
     }
 
@@ -124,7 +128,7 @@ contract BinaryVote {
         inState(State.Init)
     {
         require(
-            ECLibInterface(lib).isOnCurve(_gk[0], _gk[1], AA, BB, PP),
+            EllipticCurve.isOnCurve(_gk[0], _gk[1], AA, BB, PP),
             "Invalid public key"
         );
 
@@ -239,8 +243,8 @@ contract BinaryVote {
         uint256[2] memory p;
 
         // check Y = X * g^V
-        (p[0], p[1]) = ECLibInterface(lib).ecMul(tallyRes.V, GX, GY, AA, PP);
-        (p[0], p[1]) = ECLibInterface(lib).ecAdd(
+        (p[0], p[1]) = EllipticCurve.ecMul(tallyRes.V, GX, GY, AA, PP);
+        (p[0], p[1]) = EllipticCurve.ecAdd(
             p[0],
             p[1],
             tallyRes.X[0],
@@ -354,7 +358,7 @@ contract BinaryVote {
                 continue;
             }
 
-            (_H[0], _H[1]) = ECLibInterface(lib).ecAdd(
+            (_H[0], _H[1]) = EllipticCurve.ecAdd(
                 _H[0],
                 _H[1],
                 ballots[a].h[0],
@@ -362,7 +366,7 @@ contract BinaryVote {
                 AA,
                 PP
             );
-            (_Y[0], _Y[1]) = ECLibInterface(lib).ecAdd(
+            (_Y[0], _Y[1]) = EllipticCurve.ecAdd(
                 _Y[0],
                 _Y[1],
                 ballots[a].y[0],
@@ -407,9 +411,9 @@ contract BinaryVote {
         }
 
         // a1 = g^{r1 + d1*a}
-        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[0], h[0], h[1], AA, PP);
-        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[1], GX, GY, AA, PP);
-        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
+        (p1[0], p1[1]) = EllipticCurve.ecMul(params[0], h[0], h[1], AA, PP);
+        (p2[0], p2[1]) = EllipticCurve.ecMul(params[1], GX, GY, AA, PP);
+        (p1[0], p1[1]) = EllipticCurve.ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -422,9 +426,9 @@ contract BinaryVote {
         }
 
         // b1 = g^{k*r1} y^d1
-        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[0], y[0], y[1], AA, PP);
-        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[1], gk[0], gk[1], AA, PP);
-        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
+        (p1[0], p1[1]) = EllipticCurve.ecMul(params[0], y[0], y[1], AA, PP);
+        (p2[0], p2[1]) = EllipticCurve.ecMul(params[1], gk[0], gk[1], AA, PP);
+        (p1[0], p1[1]) = EllipticCurve.ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -437,9 +441,9 @@ contract BinaryVote {
         }
 
         // a2 = g^{r2 + d2*a}
-        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[2], h[0], h[1], AA, PP);
-        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[3], GX, GY, AA, PP);
-        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
+        (p1[0], p1[1]) = EllipticCurve.ecMul(params[2], h[0], h[1], AA, PP);
+        (p2[0], p2[1]) = EllipticCurve.ecMul(params[3], GX, GY, AA, PP);
+        (p1[0], p1[1]) = EllipticCurve.ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -452,10 +456,10 @@ contract BinaryVote {
         }
 
         // b2 = g^{k*r2} (y/g)^d2
-        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(y[0], y[1], GX, PP - GY, AA, PP);
-        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[2], p1[0], p1[1], AA, PP);
-        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[3], gk[0], gk[1], AA, PP);
-        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
+        (p1[0], p1[1]) = EllipticCurve.ecAdd(y[0], y[1], GX, PP - GY, AA, PP);
+        (p1[0], p1[1]) = EllipticCurve.ecMul(params[2], p1[0], p1[1], AA, PP);
+        (p2[0], p2[1]) = EllipticCurve.ecMul(params[3], gk[0], gk[1], AA, PP);
+        (p1[0], p1[1]) = EllipticCurve.ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -484,9 +488,9 @@ contract BinaryVote {
         uint256 c = uint256(sha256(abi.encodePacked(data, h, y, t)));
 
         // check t = (h^r)(y^c)
-        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(r, h[0], h[1], AA, PP);
-        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(c, y[0], y[1], AA, PP);
-        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
+        (p1[0], p1[1]) = EllipticCurve.ecMul(r, h[0], h[1], AA, PP);
+        (p2[0], p2[1]) = EllipticCurve.ecMul(c, y[0], y[1], AA, PP);
+        (p1[0], p1[1]) = EllipticCurve.ecAdd(
             p1[0],
             p1[1],
             p2[0],

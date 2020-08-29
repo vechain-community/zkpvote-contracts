@@ -147,7 +147,7 @@ library EllipticCurve {
         uint256 _aa,
         uint256 _bb,
         uint256 _pp
-    ) external pure returns (bool) {
+    ) internal pure returns (bool) {
         if (0 == _x || _x >= _pp || 0 == _y || _y >= _pp) {
             return false;
         }
@@ -195,7 +195,7 @@ library EllipticCurve {
         uint256 _y2,
         uint256 _aa,
         uint256 _pp
-    ) external pure returns (uint256, uint256) {
+    ) internal pure returns (uint256, uint256) {
         uint256 x = 0;
         uint256 y = 0;
         uint256 z = 0;
@@ -216,27 +216,27 @@ library EllipticCurve {
         return toAffine(x, y, z, _pp);
     }
 
-    // /// @dev Substract two points (x1, y1) and (x2, y2) in affine coordinates.
-    // /// @param _x1 coordinate x of P1
-    // /// @param _y1 coordinate y of P1
-    // /// @param _x2 coordinate x of P2
-    // /// @param _y2 coordinate y of P2
-    // /// @param _aa constant of the curve
-    // /// @param _pp the modulus
-    // /// @return (qx, qy) = P1-P2 in affine coordinates
-    // function ecSub(
-    //     uint256 _x1,
-    //     uint256 _y1,
-    //     uint256 _x2,
-    //     uint256 _y2,
-    //     uint256 _aa,
-    //     uint256 _pp
-    // ) internal pure returns (uint256, uint256) {
-    //     // invert square
-    //     (uint256 x, uint256 y) = ecInv(_x2, _y2, _pp);
-    //     // P1-square
-    //     return ecAdd(_x1, _y1, x, y, _aa, _pp);
-    // }
+    /// @dev Substract two points (x1, y1) and (x2, y2) in affine coordinates.
+    /// @param _x1 coordinate x of P1
+    /// @param _y1 coordinate y of P1
+    /// @param _x2 coordinate x of P2
+    /// @param _y2 coordinate y of P2
+    /// @param _aa constant of the curve
+    /// @param _pp the modulus
+    /// @return (qx, qy) = P1-P2 in affine coordinates
+    function ecSub(
+        uint256 _x1,
+        uint256 _y1,
+        uint256 _x2,
+        uint256 _y2,
+        uint256 _aa,
+        uint256 _pp
+    ) internal pure returns (uint256, uint256) {
+        // invert square
+        (uint256 x, uint256 y) = ecInv(_x2, _y2, _pp);
+        // P1-square
+        return ecAdd(_x1, _y1, x, y, _aa, _pp);
+    }
 
     /// @dev Multiply point (x1, y1, z1) times d in affine coordinates.
     /// @param _k scalar to multiply
@@ -251,7 +251,7 @@ library EllipticCurve {
         uint256 _y,
         uint256 _aa,
         uint256 _pp
-    ) external pure returns (uint256, uint256) {
+    ) internal pure returns (uint256, uint256) {
         // Jacobian multiplication
         (uint256 x1, uint256 y1, uint256 z1) = jacMul(_k, _x, _y, 1, _aa, _pp);
         // Get back to affine
