@@ -11,10 +11,14 @@ contract VotingContractInterface {
 contract VoteCreator {
     address public owner;
     address public c;
+    address public lib;
 
     /// Constructor
-    constructor() public {
+    constructor(address _lib) public {
+        require(uint256(_lib) > 0, "Invalid EC library address");
+
         owner = msg.sender;
+        lib = _lib;
     }
 
     modifier onlyOwner() {
@@ -31,9 +35,10 @@ contract VoteCreator {
 
     /// Create an instance of contract BinaryVote and register it in the deployed voting contract
     function newBinaryVote() external {
+        require(uint256(lib) > 0, "EC library contract has not been set");
         require(uint256(c) > 0, "Voting contract has not been set");
 
-        BinaryVote vote = new BinaryVote();
+        BinaryVote vote = new BinaryVote(lib);
 
         VotingContractInterface(c).newBinaryVote(msg.sender, address(vote));
 

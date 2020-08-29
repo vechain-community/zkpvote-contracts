@@ -1,9 +1,36 @@
 pragma solidity >=0.5.3 <0.7.0;
 
-import "./EllipticCurve.sol";
+// import "./ECLibInterface(lib).sol";
+contract ECLibInterface {
+    function ecAdd(
+        uint256 _x1,
+        uint256 _y1,
+        uint256 _x2,
+        uint256 _y2,
+        uint256 _aa,
+        uint256 _pp
+    ) external pure returns (uint256, uint256);
 
+    function ecMul(
+        uint256 _k,
+        uint256 _x,
+        uint256 _y,
+        uint256 _aa,
+        uint256 _pp
+    ) external pure returns (uint256, uint256);
+
+    function isOnCurve(
+        uint256 _x,
+        uint256 _y,
+        uint256 _aa,
+        uint256 _bb,
+        uint256 _pp
+    ) external pure returns (bool);
+}
+
+/// @title Binary Vote Contract
 /// @author Peter Zhou
-/// @title Contract for realizing a yes/no vote 
+/// @dev Contract for realizing a yes/no vote 
 contract BinaryVote {
     // P245 curve constants
     uint256 constant GX = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296;
@@ -36,19 +63,21 @@ contract BinaryVote {
         uint256 r;
     }
 
+    address private lib;
+
     // Authority
-    address auth; // account address
-    uint256[2] gk; // authority-generated public key
+    address private auth; // account address
+    uint256[2] private gk; // authority-generated public key
 
     // Ballots
-    address[] voters; // addresses of the accounts that have cast a ballot
-    mapping(address => bool) checkBallot; // mapping used to check whether an account has cast a ballot
-    mapping(address => Ballot) ballots;
+    address[] private voters; // addresses of the accounts that have cast a ballot
+    mapping(address => bool) private checkBallot; // mapping used to check whether an account has cast a ballot
+    mapping(address => Ballot) private ballots;
 
     // Data uploaded by authority
-    address[] nullVoters; // addresses of the accounts that have cast an invalid ballot
-    mapping(address => bool) checkInvalidBallot; // mapping used to check whether an account has cast an invalid ballot
-    TallyRes tallyRes; // outputs of the tally carried by authority off-chain
+    address[] private nullVoters; // addresses of the accounts that have cast an invalid ballot
+    mapping(address => bool) private checkInvalidBallot; // mapping used to check whether an account has cast an invalid ballot
+    TallyRes private tallyRes; // outputs of the tally carried by authority off-chain
 
     enum State {
         Init,
@@ -79,12 +108,15 @@ contract BinaryVote {
         _;
     }
 
-    constructor() public {
+    constructor(address _lib) public {
+        require(uint256(_lib) > 0, "Invalid EC library address");
+
         auth = tx.origin;
+        lib = _lib;
         state = State.Init;
     }
 
-    /// Set public key by the authority
+    /// @dev Set public key by the authority
     /// @param _gk Public key
     function setAuthPubKey(uint256[2] calldata _gk)
         external
@@ -92,7 +124,7 @@ contract BinaryVote {
         inState(State.Init)
     {
         require(
-            EllipticCurve.isOnCurve(_gk[0], _gk[1], AA, BB, PP),
+            ECLibInterface(lib).isOnCurve(_gk[0], _gk[1], AA, BB, PP),
             "Invalid public key"
         );
 
@@ -102,22 +134,22 @@ contract BinaryVote {
         emit RegAuthPubKey(_gk[0], _gk[1]);
     }
 
-    /// Cast a yes/no ballot
-    /// @param _h g^a
-    /// @param _y (g^ka)(g^v) v\in{0,1}
-    /// @param _params part of the zk proof
-    /// @param _a1 part of the zk proof
-    /// @param _b1 part of the zk proof
-    /// @param _a2 part of the zk proof
-    /// @param _b2 part of the zk proof
+    /// @dev Cast a yes/no ballot
+    /// @param h g^a
+    /// @param y (g^ka)(g^v) v\in{0,1}
+    /// @param params [d1,r1,d2,r2]
+    /// @param a1 a1
+    /// @param b1 b1
+    /// @param a2 a2
+    /// @param b2 b2
     function cast(
-        uint256[2] calldata _h,
-        uint256[2] calldata _y,
-        uint256[4] calldata _params,
-        uint256[2] calldata _a1,
-        uint256[2] calldata _b1,
-        uint256[2] calldata _a2,
-        uint256[2] calldata _b2
+        uint256[2] calldata h,
+        uint256[2] calldata y,
+        uint256[4] calldata params,
+        uint256[2] calldata a1,
+        uint256[2] calldata b1,
+        uint256[2] calldata a2,
+        uint256[2] calldata b2
     ) external inState(State.Cast) {
         if (!checkBallot[tx.origin]) {
             checkBallot[tx.origin] = true;
@@ -125,47 +157,47 @@ contract BinaryVote {
         }
 
         ballots[tx.origin] = Ballot({
-            h: _h,
-            y: _y,
-            params: _params,
-            a1: _a1,
-            b1: _b1,
-            a2: _a2,
-            b2: _b2
+            h: h,
+            y: y,
+            params: params,
+            a1: a1,
+            b1: b1,
+            a2: a2,
+            b2: b2
         });
 
-        emit Cast(tx.origin, keccak256(abi.encode(_h, _y)));
+        emit Cast(tx.origin, keccak256(abi.encode(h, y)));
     }
 
-    /// Start tally by the authority
+    /// @dev Start tally by the authority
     function beginTally() external onlyAuth() inState(State.Cast) {
         state = State.Tally;
     }
 
-    /// End tally by the authority
+    /// @dev End tally by the authority
     function endTally() external onlyAuth() inState(State.Tally) {
         state = State.End;
     }
 
-    /// Upload the tally result
-    /// @param _nullVoters addresses of the voters whose ballots are invalid
-    /// @param _V Total number of yes votes
-    /// @param _X prod_i(h_i) 
-    /// @param _Y prod_i(y_i)
-    /// @param _H part of the zk proof
-    /// @param _t part of the zk proof
-    /// @param _r part of the zk proof
+    /// @dev Upload the tally result
+    /// @param nulls addresses of the voters whose ballots are invalid
+    /// @param V Total number of yes votes
+    /// @param X H^k 
+    /// @param Y prod_i(y_i)
+    /// @param H prod_i(h_i)
+    /// @param t t
+    /// @param r r
     function setTallyRes(
-        address[] calldata _nullVoters,
-        uint256 _V,
-        uint256[2] calldata _X,
-        uint256[2] calldata _Y,
-        uint256[2] calldata _H,
-        uint256[2] calldata _t,
-        uint256 _r
+        address[] calldata nulls,
+        uint256 V,
+        uint256[2] calldata X,
+        uint256[2] calldata Y,
+        uint256[2] calldata H,
+        uint256[2] calldata t,
+        uint256 r
     ) external onlyAuth() inState(State.Tally) {
-        for (uint256 i = 0; i < _nullVoters.length; i++) {
-            address a = _nullVoters[i];
+        for (uint256 i = 0; i < nulls.length; i++) {
+            address a = nulls[i];
 
             if (checkBallot[a] && !checkInvalidBallot[a]) {
                 checkInvalidBallot[a] = true;
@@ -173,12 +205,12 @@ contract BinaryVote {
             }
         }
 
-        tallyRes = TallyRes({V: _V, X: _X, Y: _Y, H: _H, t: _t, r: _r});
+        tallyRes = TallyRes({V: V, X: X, Y: Y, H: H, t: t, r: r});
 
-        emit Tally(_V, keccak256(abi.encode(_X, _Y)));
+        emit Tally(V, keccak256(abi.encode(X, Y)));
     }
 
-    /// Verify a cast ballot
+    /// @dev Verify a cast ballot
     /// @param a address of the account used to cast the ballot
     /// @return true or false
     function verifyBallot(address a) external view returns (bool) {
@@ -197,7 +229,7 @@ contract BinaryVote {
             );
     }
 
-    /// Verify the tally result after the tally is ended by the authority
+    /// @dev Verify the tally result after the tally is ended by the authority
     /// @return true or false
     function verifyTallyRes() external view inState(State.End) returns (bool) {
         if (!verifyHAndY()) {
@@ -207,8 +239,8 @@ contract BinaryVote {
         uint256[2] memory p;
 
         // check Y = X * g^V
-        (p[0], p[1]) = EllipticCurve.ecMul(tallyRes.V, GX, GY, AA, PP);
-        (p[0], p[1]) = EllipticCurve.ecAdd(
+        (p[0], p[1]) = ECLibInterface(lib).ecMul(tallyRes.V, GX, GY, AA, PP);
+        (p[0], p[1]) = ECLibInterface(lib).ecAdd(
             p[0],
             p[1],
             tallyRes.X[0],
@@ -230,41 +262,47 @@ contract BinaryVote {
             );
     }
 
-    /// Get authority public key
+    /// @dev Get authority public key
     /// @return Public key
     function getAuthPubKey() external view returns (uint256[2] memory) {
         return gk;
     }
     
-    /// Get the number of different accounts that have been used to cast a ballot
+    /// @dev Get the number of different accounts that have been used to cast a ballot
     /// @return Number of accounts
     function getNumVoter() external view returns (uint256) {
         return voters.length;
     }
 
-    /// Get the address of a particular account used to cast a ballot
+    /// @dev Get the address of a particular account used to cast a ballot
     /// @param i Index
     /// @return Account address
     function getVoter(uint256 i) external view returns (address) {
         return voters[i];
     }
 
-    /// Get the number of accounts used to cast ballots are invalidated by the authority
+    /// @dev Get the number of accounts used to cast ballots are invalidated by the authority
     /// @return Number of accounts
     function getNumNullVoter() external view returns (uint256) {
         return nullVoters.length;
     }
 
-    /// Get the address of a particular account used to cast an invalid ballot
+    /// @dev Get the address of a particular account used to cast an invalid ballot
     /// @param i Index
     /// @return Account address
     function getNullVoter(uint256 i) external view returns (address) {
         return nullVoters[i];
     }
 
-    /// Get a ballot stored in the contract indexed by the account address
+    /// @dev Get a ballot stored in the contract indexed by the account address
     /// @param a account address
-    /// @return ballot data
+    /// @return h
+    /// @return y
+    /// @return params
+    /// @return a1
+    /// @return b1
+    /// @return a2
+    /// @return b2
     function getBallot(address a)
         external
         view
@@ -291,7 +329,7 @@ contract BinaryVote {
         );
     }
 
-    /// Get the total number of valid ballots stored in the contact
+    /// @dev Get the total number of valid ballots stored in the contact
     /// @return total number
     function getValidBallotNum()
         external
@@ -302,7 +340,7 @@ contract BinaryVote {
         return voters.length - nullVoters.length;
     }
 
-    /// Verify H = prod_i(h_i) and Y = prod_i(y_i)
+    /// @dev Verify H = prod_i(h_i) and Y = prod_i(y_i)
     /// @return true or false
     function verifyHAndY() internal view returns (bool) {
         uint256[2] memory _H;
@@ -316,7 +354,7 @@ contract BinaryVote {
                 continue;
             }
 
-            (_H[0], _H[1]) = EllipticCurve.ecAdd(
+            (_H[0], _H[1]) = ECLibInterface(lib).ecAdd(
                 _H[0],
                 _H[1],
                 ballots[a].h[0],
@@ -324,7 +362,7 @@ contract BinaryVote {
                 AA,
                 PP
             );
-            (_Y[0], _Y[1]) = EllipticCurve.ecAdd(
+            (_Y[0], _Y[1]) = ECLibInterface(lib).ecAdd(
                 _Y[0],
                 _Y[1],
                 ballots[a].y[0],
@@ -346,17 +384,7 @@ contract BinaryVote {
         return true;
     }
 
-    /// Verify the zk proof within a ballot. The proof is used to prove that
-    /// the encrypted value in the ballot is either 0 (NO) or 1 (YES).
-    /// @param data address of the account used to cast the ballot
-    /// @param h
-    /// @param y
-    /// @param params
-    /// @param a1
-    /// @param b1
-    /// @param a2
-    /// @param b2
-    /// @return true or false
+    /// @dev Verify the zk proof proving that the encrypted value is either 1 or 0
     function verifyBinaryZKP(
         address data,
         uint256[2] storage h,
@@ -379,9 +407,9 @@ contract BinaryVote {
         }
 
         // a1 = g^{r1 + d1*a}
-        (p1[0], p1[1]) = EllipticCurve.ecMul(params[0], h[0], h[1], AA, PP);
-        (p2[0], p2[1]) = EllipticCurve.ecMul(params[1], GX, GY, AA, PP);
-        (p1[0], p1[1]) = EllipticCurve.ecAdd(
+        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[0], h[0], h[1], AA, PP);
+        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[1], GX, GY, AA, PP);
+        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -394,9 +422,9 @@ contract BinaryVote {
         }
 
         // b1 = g^{k*r1} y^d1
-        (p1[0], p1[1]) = EllipticCurve.ecMul(params[0], y[0], y[1], AA, PP);
-        (p2[0], p2[1]) = EllipticCurve.ecMul(params[1], gk[0], gk[1], AA, PP);
-        (p1[0], p1[1]) = EllipticCurve.ecAdd(
+        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[0], y[0], y[1], AA, PP);
+        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[1], gk[0], gk[1], AA, PP);
+        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -409,9 +437,9 @@ contract BinaryVote {
         }
 
         // a2 = g^{r2 + d2*a}
-        (p1[0], p1[1]) = EllipticCurve.ecMul(params[2], h[0], h[1], AA, PP);
-        (p2[0], p2[1]) = EllipticCurve.ecMul(params[3], GX, GY, AA, PP);
-        (p1[0], p1[1]) = EllipticCurve.ecAdd(
+        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[2], h[0], h[1], AA, PP);
+        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[3], GX, GY, AA, PP);
+        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -424,10 +452,10 @@ contract BinaryVote {
         }
 
         // b2 = g^{k*r2} (y/g)^d2
-        (p1[0], p1[1]) = EllipticCurve.ecAdd(y[0], y[1], GX, PP - GY, AA, PP);
-        (p1[0], p1[1]) = EllipticCurve.ecMul(params[2], p1[0], p1[1], AA, PP);
-        (p2[0], p2[1]) = EllipticCurve.ecMul(params[3], gk[0], gk[1], AA, PP);
-        (p1[0], p1[1]) = EllipticCurve.ecAdd(
+        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(y[0], y[1], GX, PP - GY, AA, PP);
+        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(params[2], p1[0], p1[1], AA, PP);
+        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(params[3], gk[0], gk[1], AA, PP);
+        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
             p2[0],
             p2[1],
             p1[0],
@@ -442,15 +470,7 @@ contract BinaryVote {
         return true;
     }
 
-    /// Verify the zk proof within the tally result. The proof is used to prove that
-    /// who uploads the tally result knows the private key associated with authority's 
-    /// public key. 
-    /// @param data address of the account the authority uses to interact with the cotract
-    /// @param h
-    /// @param y
-    /// @param t
-    /// @param r
-    /// @return true or false
+    /// @dev Verify the zk proof proving the knowledge of authority private key 
     function verifyECFSProof(
         address data,
         uint256[2] storage h,
@@ -464,9 +484,9 @@ contract BinaryVote {
         uint256 c = uint256(sha256(abi.encodePacked(data, h, y, t)));
 
         // check t = (h^r)(y^c)
-        (p1[0], p1[1]) = EllipticCurve.ecMul(r, h[0], h[1], AA, PP);
-        (p2[0], p2[1]) = EllipticCurve.ecMul(c, y[0], y[1], AA, PP);
-        (p1[0], p1[1]) = EllipticCurve.ecAdd(
+        (p1[0], p1[1]) = ECLibInterface(lib).ecMul(r, h[0], h[1], AA, PP);
+        (p2[0], p2[1]) = ECLibInterface(lib).ecMul(c, y[0], y[1], AA, PP);
+        (p1[0], p1[1]) = ECLibInterface(lib).ecAdd(
             p1[0],
             p1[1],
             p2[0],
