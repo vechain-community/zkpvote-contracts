@@ -1,36 +1,12 @@
 pragma solidity >=0.5.3 <0.7.0;
 
 import "./EllipticCurve.sol";
-// contract ECLibInterface {
-//     function ecAdd(
-//         uint256 _x1,
-//         uint256 _y1,
-//         uint256 _x2,
-//         uint256 _y2,
-//         uint256 _aa,
-//         uint256 _pp
-//     ) external pure returns (uint256, uint256);
-
-//     function ecMul(
-//         uint256 _k,
-//         uint256 _x,
-//         uint256 _y,
-//         uint256 _aa,
-//         uint256 _pp
-//     ) external pure returns (uint256, uint256);
-
-//     function isOnCurve(
-//         uint256 _x,
-//         uint256 _y,
-//         uint256 _aa,
-//         uint256 _bb,
-//         uint256 _pp
-//     ) external pure returns (bool);
-// }
 
 /// @title Binary Vote Contract
 /// @author Peter Zhou
-/// @dev Contract for realizing a yes/no vote 
+/// @dev Implementation of a privacy-preserved voting protocol 
+/// @notice Curve p256 is implemented
+/// @notice Support YES/NO ballots only 
 contract BinaryVote {
     // P245 curve constants
     uint256 constant GX = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296;

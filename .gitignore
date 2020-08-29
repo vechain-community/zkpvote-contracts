@@ -1,4 +1,9 @@
 /build/
 /node_modules/
 
+/test/data/dl-bin-ballot.json
+/test/data/info.json
+
+/testnet/*.js
+
 .DS_Store
