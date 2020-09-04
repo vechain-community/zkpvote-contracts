@@ -1,16 +1,13 @@
 pragma solidity >=0.5.3 <0.7.0;
 
 contract BinaryVoteInterface {
-    function setAuthPubKey(uint256[2] calldata gk) external;
+    function setAuthPubKey(uint256 gk, uint8 gkPrefix) external;
 
     function cast(
-        uint256[2] calldata h,
-        uint256[2] calldata y,
-        uint256[4] calldata params,
-        uint256[2] calldata a1,
-        uint256[2] calldata b1,
-        uint256[2] calldata a2,
-        uint256[2] calldata b2
+        uint256 h,
+        uint256 y,
+        uint256[8] calldata zkp,
+        uint256 prefix
     ) external;
 
     function beginTally() external;
@@ -20,11 +17,10 @@ contract BinaryVoteInterface {
     function setTallyRes(
         address[] calldata nullVoters,
         uint256 V,
-        uint256[2] calldata X,
-        uint256[2] calldata Y,
-        uint256[2] calldata H,
-        uint256[2] calldata t,
-        uint256 r
+        uint256 X,
+        uint256 Y,
+        uint256[3] calldata zkp,
+        uint256 prefix
     ) external;
 
     function verifyBallot(address a) external view returns (bool);
@@ -45,13 +41,10 @@ contract BinaryVoteInterface {
         external
         view
         returns (
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[4] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory
+            uint256,
+            uint256,
+            uint256[8] memory,
+            uint256
         );
 }
 
@@ -92,38 +85,39 @@ contract VotingContract {
     /// @dev Set public key by the authority
     /// @param id Vote ID
     /// @param _gk Public key
-    function setAuthPubKey(bytes32 id, uint256[2] calldata _gk) external {
+    function setAuthPubKey(bytes32 id, uint256 _gk, uint8 _gkPrefix) external {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
-        c.setAuthPubKey(_gk);
+        c.setAuthPubKey(_gk, _gkPrefix);
     }
 
     /// @dev Cast a yes/no ballot
     /// @param id Vote ID
     /// @param h g^a
     /// @param y (g^ka)(g^v) v\in{0,1}
-    /// @param params part of the zk proof
-    /// @param a1 part of the zk proof
-    /// @param b1 part of the zk proof
-    /// @param a2 part of the zk proof
-    /// @param b2 part of the zk proof
+    /// @param zkp proof of a binary voting value; zkp = [d1, r1, d2, r2, a1, b1, a2, b2]
+    /// @param prefix parity bytes (0x02 even, 0x03 odd) for for compressed ec points h | y | a1 | b1 | a2 | b2
     function cast(
         bytes32 id,
-        uint256[2] calldata h,
-        uint256[2] calldata y,
-        uint256[4] calldata params,
-        uint256[2] calldata a1,
-        uint256[2] calldata b1,
-        uint256[2] calldata a2,
-        uint256[2] calldata b2
+        uint256 h,
+        uint256 y,
+        uint256[8] calldata zkp,
+        uint256 prefix
     ) external {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
-        c.cast(h, y, params, a1, b1, a2, b2);
+        c.cast(h, y, zkp, prefix);
 
-        emit CastBinaryBallot(id, msg.sender, keccak256(abi.encode(h, y)));
+        emit CastBinaryBallot(
+            id, 
+            msg.sender, 
+            keccak256(abi.encode(
+                h, getByteVal(prefix, 5),
+                y, getByteVal(prefix, 4)
+            ))
+        );
     }
 
     /// @dev Start tally by the authority
@@ -154,25 +148,29 @@ contract VotingContract {
     /// @param V Total number of yes votes
     /// @param X prod_i(h_i) 
     /// @param Y prod_i(y_i)
-    /// @param H part of the zk proof
-    /// @param t part of the zk proof
-    /// @param r part of the zk proof
+    /// @param zkp proof of the knowedge of k; zkp = [H, t, r]
+    /// @param prefix parity bytes (0x02 even, 0x03 odd) for compressed ec points X | Y | H | t
     function setTallyRes(
         bytes32 id,
         address[] calldata nullVoters,
         uint256 V,
-        uint256[2] calldata X,
-        uint256[2] calldata Y,
-        uint256[2] calldata H,
-        uint256[2] calldata t,
-        uint256 r
+        uint256 X,
+        uint256 Y,
+        uint256[3] calldata zkp,
+        uint256 prefix
     ) external {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
-        c.setTallyRes(nullVoters, V, X, Y, H, t, r);
+        c.setTallyRes(nullVoters, V, X, Y, zkp, prefix);
 
-        emit SetTallyRes(id, msg.sender, V, keccak256(abi.encode(X, Y)));
+        emit SetTallyRes(
+            id, msg.sender, V, 
+            keccak256(abi.encode(
+                X, getByteVal(prefix, 3),
+                Y, getByteVal(prefix, 2)
+            ))
+        );
     }
 
     /// @dev Verify a cast ballot
@@ -275,28 +273,26 @@ contract VotingContract {
     /// @param a account address
     /// @return h
     /// @return y
-    /// @return params
-    /// @return a1
-    /// @return b1
-    /// @return a2
-    /// @return b2
+    /// @return zkp
+    /// @return prefix
     function getBallot(bytes32 id, address a)
         external
         view
         returns (
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[4] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory
+            uint256,
+            uint256,
+            uint256[8] memory,
+            uint256
         )
     {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
         return c.getBallot(a);
+    }
+
+    function getByteVal(uint256 b, uint256 i) internal pure returns (uint8) {
+        return uint8((b >> i * 8) & 0xff);
     }
 
     event NewBinaryVote(bytes32 indexed id, address indexed from, address addr);

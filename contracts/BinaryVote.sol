@@ -4,9 +4,9 @@ import "./EllipticCurve.sol";
 
 /// @title Binary Vote Contract
 /// @author Peter Zhou
-/// @dev Implementation of a privacy-preserved voting protocol 
+/// @dev Implementation of a privacy-preserved voting protocol
 /// @notice Curve p256 is implemented
-/// @notice Support YES/NO ballots only 
+/// @notice Support YES/NO ballots only
 contract BinaryVote {
     // P245 curve constants
     uint256 constant GX = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296;
@@ -18,32 +18,27 @@ contract BinaryVote {
 
     // content of a ballot
     struct Ballot {
-        uint256[2] h; // public key
-        uint256[2] y; // encrypted vote
-        // binary zkp proof
-        uint256[4] params;
-        uint256[2] a1;
-        uint256[2] b1;
-        uint256[2] a2;
-        uint256[2] b2;
+        uint256 h; // public key
+        uint256 y; // encrypted vote
+        uint256[8] zkp; // [d1, r1, d2, r2, a1, b1, a2, b2];
+        uint256 prefix; // order: h | y | a1 | b1 | a2 | b2
     }
 
     struct TallyRes {
         uint256 V; // number of yes votes
         // Values from which V is computed and to be verified
-        uint256[2] X; // X = H^k
-        uint256[2] Y; // Y = X * g^V
-        // ECFS proof
-        uint256[2] H; // H = prod_i h_i
-        uint256[2] t;
-        uint256 r;
+        uint256 X; // X = H^k
+        uint256 Y; // Y = X * g^V
+        uint256[3] zkp; // [H, t, r]
+        uint256 prefix; // order: X | Y | H | t
     }
 
     // address private lib;
 
     // Authority
     address private auth; // account address
-    uint256[2] private gk; // authority-generated public key
+    uint8 private gkPrefix;
+    uint256 private gk; // authority-generated public key
 
     // Ballots
     address[] private voters; // addresses of the accounts that have cast a ballot
@@ -84,69 +79,51 @@ contract BinaryVote {
         _;
     }
 
-    // constructor(address _lib) public {
-    //     require(uint256(_lib) > 0, "Invalid EC library address");
-
-    //     auth = tx.origin;
-    //     lib = _lib;
-    //     state = State.Init;
-    // }
     constructor() public {
         auth = tx.origin;
         state = State.Init;
     }
 
-    /// @dev Set public key by the authority
-    /// @param _gk Public key
-    function setAuthPubKey(uint256[2] calldata _gk)
+    /// @dev Set compressed public key by the authority
+    /// @param _gk x coordinate
+    /// @param _gkPrefix prefix
+    function setAuthPubKey(uint256 _gk, uint8 _gkPrefix)
         external
         onlyAuth
         inState(State.Init)
     {
+        uint256 y = EllipticCurve.deriveY(_gkPrefix, _gk, AA, BB, PP);
+
         require(
-            EllipticCurve.isOnCurve(_gk[0], _gk[1], AA, BB, PP),
+            EllipticCurve.isOnCurve(_gk, y, AA, BB, PP),
             "Invalid public key"
         );
 
         gk = _gk;
+        gkPrefix = _gkPrefix;
+
         state = State.Cast;
 
-        emit RegAuthPubKey(_gk[0], _gk[1]);
+        // emit RegAuthPubKey(_gk, _gkPrefix);
     }
 
-    /// @dev Cast a yes/no ballot
+    /// @dev Cast a yes/no ballot8
     /// @param h g^a
     /// @param y (g^ka)(g^v) v\in{0,1}
-    /// @param params [d1,r1,d2,r2]
-    /// @param a1 a1
-    /// @param b1 b1
-    /// @param a2 a2
-    /// @param b2 b2
+    /// @param zkp proof of a binary voting value; zkp = [d1, r1, d2, r2, a1, b1, a2, b2]
+    /// @param prefix parity bytes (0x02 even, 0x03 odd) for for compressed ec points h | y | a1 | b1 | a2 | b2
     function cast(
-        uint256[2] calldata h,
-        uint256[2] calldata y,
-        uint256[4] calldata params,
-        uint256[2] calldata a1,
-        uint256[2] calldata b1,
-        uint256[2] calldata a2,
-        uint256[2] calldata b2
+        uint256 h,
+        uint256 y,
+        uint256[8] calldata zkp,
+        uint256 prefix
     ) external inState(State.Cast) {
         if (!checkBallot[tx.origin]) {
             checkBallot[tx.origin] = true;
             voters.push(tx.origin);
         }
 
-        ballots[tx.origin] = Ballot({
-            h: h,
-            y: y,
-            params: params,
-            a1: a1,
-            b1: b1,
-            a2: a2,
-            b2: b2
-        });
-
-        emit Cast(tx.origin, keccak256(abi.encode(h, y)));
+        ballots[tx.origin] = Ballot({h: h, y: y, zkp: zkp, prefix: prefix});
     }
 
     /// @dev Start tally by the authority
@@ -162,19 +139,17 @@ contract BinaryVote {
     /// @dev Upload the tally result
     /// @param nulls addresses of the voters whose ballots are invalid
     /// @param V Total number of yes votes
-    /// @param X H^k 
+    /// @param X H^k
     /// @param Y prod_i(y_i)
-    /// @param H prod_i(h_i)
-    /// @param t t
-    /// @param r r
+    /// @param zkp proof of the knowedge of k; zkp = [H, t, r]
+    /// @param prefix parity bytes (0x02 even, 0x03 odd) for compressed ec points X | Y | H | t
     function setTallyRes(
         address[] calldata nulls,
         uint256 V,
-        uint256[2] calldata X,
-        uint256[2] calldata Y,
-        uint256[2] calldata H,
-        uint256[2] calldata t,
-        uint256 r
+        uint256 X,
+        uint256 Y,
+        uint256[3] calldata zkp,
+        uint256 prefix
     ) external onlyAuth() inState(State.Tally) {
         for (uint256 i = 0; i < nulls.length; i++) {
             address a = nulls[i];
@@ -185,9 +160,7 @@ contract BinaryVote {
             }
         }
 
-        tallyRes = TallyRes({V: V, X: X, Y: Y, H: H, t: t, r: r});
-
-        emit Tally(V, keccak256(abi.encode(X, Y)));
+        tallyRes = TallyRes({V: V, X: X, Y: Y, zkp: zkp, prefix: prefix});
     }
 
     /// @dev Verify a cast ballot
@@ -196,16 +169,24 @@ contract BinaryVote {
     function verifyBallot(address a) external view returns (bool) {
         require(checkBallot[a], "Ballot does not exist");
 
+        uint256[4] memory params;
+        uint256 prefix = ballots[a].prefix;
+
+        params[0] = ballots[a].zkp[0];
+        params[1] = ballots[a].zkp[1];
+        params[2] = ballots[a].zkp[2];
+        params[3] = ballots[a].zkp[3];
+
         return
             verifyBinaryZKP(
                 a,
-                ballots[a].h,
-                ballots[a].y,
-                ballots[a].params,
-                ballots[a].a1,
-                ballots[a].b1,
-                ballots[a].a2,
-                ballots[a].b2
+                getECPoint(ballots[a].h, getByteVal(prefix, 5)), // h
+                getECPoint(ballots[a].y, getByteVal(prefix, 4)), // y
+                params, // [d1, r1, d2, r2]
+                getECPoint(ballots[a].zkp[4], getByteVal(prefix, 3)), // a1
+                getECPoint(ballots[a].zkp[5], getByteVal(prefix, 2)), // b1
+                getECPoint(ballots[a].zkp[6], getByteVal(prefix, 1)), // a2
+                getECPoint(ballots[a].zkp[7], getByteVal(prefix, 0)) // b2
             );
     }
 
@@ -217,37 +198,34 @@ contract BinaryVote {
         }
 
         uint256[2] memory p;
+        uint256[2] memory X;
+        X = getECPoint(tallyRes.X, getByteVal(tallyRes.prefix, 3));
+        uint256[2] memory Y;
+        Y = getECPoint(tallyRes.Y, getByteVal(tallyRes.prefix, 2));
 
         // check Y = X * g^V
         (p[0], p[1]) = EllipticCurve.ecMul(tallyRes.V, GX, GY, AA, PP);
-        (p[0], p[1]) = EllipticCurve.ecAdd(
-            p[0],
-            p[1],
-            tallyRes.X[0],
-            tallyRes.X[1],
-            AA,
-            PP
-        );
-        if (p[0] != tallyRes.Y[0] || p[1] != tallyRes.Y[1]) {
+        (p[0], p[1]) = EllipticCurve.ecAdd(p[0], p[1], X[0], X[1], AA, PP);
+        if (p[0] != Y[0] || p[1] != Y[1]) {
             return false;
         }
 
         return
             verifyECFSProof(
                 auth,
-                tallyRes.H,
-                tallyRes.X,
-                tallyRes.t,
-                tallyRes.r
+                getECPoint(tallyRes.zkp[0], getByteVal(tallyRes.prefix, 1)),    // H
+                X,                                                              // X
+                getECPoint(tallyRes.zkp[1], getByteVal(tallyRes.prefix, 0)),    // t
+                tallyRes.zkp[2]                                                 // r
             );
     }
 
     /// @dev Get authority public key
     /// @return Public key
     function getAuthPubKey() external view returns (uint256[2] memory) {
-        return gk;
+        return getECPoint(gk, gkPrefix);
     }
-    
+
     /// @dev Get the number of different accounts that have been used to cast a ballot
     /// @return Number of accounts
     function getNumVoter() external view returns (uint256) {
@@ -278,35 +256,21 @@ contract BinaryVote {
     /// @param a account address
     /// @return h
     /// @return y
-    /// @return params
-    /// @return a1
-    /// @return b1
-    /// @return a2
-    /// @return b2
+    /// @return zkp
+    /// @return prefix
     function getBallot(address a)
         external
         view
         returns (
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[4] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory,
-            uint256[2] memory
+            uint256,
+            uint256,
+            uint256[8] memory,
+            uint256
         )
     {
         require(checkBallot[a], "Ballot does not exist");
 
-        return (
-            ballots[a].h,
-            ballots[a].y,
-            ballots[a].params,
-            ballots[a].a1,
-            ballots[a].b1,
-            ballots[a].a2,
-            ballots[a].b2
-        );
+        return (ballots[a].h, ballots[a].y, ballots[a].zkp, ballots[a].prefix);
     }
 
     /// @dev Get the total number of valid ballots stored in the contact
@@ -337,26 +301,52 @@ contract BinaryVote {
             (_H[0], _H[1]) = EllipticCurve.ecAdd(
                 _H[0],
                 _H[1],
-                ballots[a].h[0],
-                ballots[a].h[1],
+                ballots[a].h,
+                EllipticCurve.deriveY(
+                    getByteVal(ballots[a].prefix, 5),
+                    ballots[a].h,
+                    AA,
+                    BB,
+                    PP
+                ),
                 AA,
                 PP
             );
             (_Y[0], _Y[1]) = EllipticCurve.ecAdd(
                 _Y[0],
                 _Y[1],
-                ballots[a].y[0],
-                ballots[a].y[1],
+                ballots[a].y,
+                EllipticCurve.deriveY(
+                    getByteVal(ballots[a].prefix, 4),
+                    ballots[a].y,
+                    AA,
+                    BB,
+                    PP
+                ),
                 AA,
                 PP
             );
         }
 
         if (
-            _H[0] != tallyRes.H[0] ||
-            _H[1] != tallyRes.H[1] ||
-            _Y[0] != tallyRes.Y[0] ||
-            _Y[1] != tallyRes.Y[1]
+            _H[0] != tallyRes.zkp[0] ||
+            _Y[0] != tallyRes.Y ||
+            _H[1] !=
+            EllipticCurve.deriveY(
+                getByteVal(tallyRes.prefix, 1),
+                tallyRes.zkp[0],
+                AA,
+                BB,
+                PP
+            ) ||
+            _Y[1] !=
+            EllipticCurve.deriveY(
+                getByteVal(tallyRes.prefix, 2),
+                tallyRes.Y,
+                AA,
+                BB,
+                PP
+            )
         ) {
             return false;
         }
@@ -367,16 +357,18 @@ contract BinaryVote {
     /// @dev Verify the zk proof proving that the encrypted value is either 1 or 0
     function verifyBinaryZKP(
         address data,
-        uint256[2] storage h,
-        uint256[2] storage y,
-        uint256[4] storage params, // [d1, r1, d2, r2]
-        uint256[2] storage a1,
-        uint256[2] storage b1,
-        uint256[2] storage a2,
-        uint256[2] storage b2
+        uint256[2] memory h,
+        uint256[2] memory y,
+        uint256[4] memory params, // [d1, r1, d2, r2]
+        uint256[2] memory a1,
+        uint256[2] memory b1,
+        uint256[2] memory a2,
+        uint256[2] memory b2
     ) internal view returns (bool) {
         uint256[2] memory p1;
         uint256[2] memory p2;
+        uint256[2] memory GK;
+        GK = getECPoint(gk, gkPrefix);
 
         // hash(data, ga, y, a1, b1, a2, b2) == d1 + d2 (mod n)
         if (
@@ -403,7 +395,7 @@ contract BinaryVote {
 
         // b1 = g^{k*r1} y^d1
         (p1[0], p1[1]) = EllipticCurve.ecMul(params[0], y[0], y[1], AA, PP);
-        (p2[0], p2[1]) = EllipticCurve.ecMul(params[1], gk[0], gk[1], AA, PP);
+        (p2[0], p2[1]) = EllipticCurve.ecMul(params[1], GK[0], GK[1], AA, PP);
         (p1[0], p1[1]) = EllipticCurve.ecAdd(
             p2[0],
             p2[1],
@@ -434,7 +426,7 @@ contract BinaryVote {
         // b2 = g^{k*r2} (y/g)^d2
         (p1[0], p1[1]) = EllipticCurve.ecAdd(y[0], y[1], GX, PP - GY, AA, PP);
         (p1[0], p1[1]) = EllipticCurve.ecMul(params[2], p1[0], p1[1], AA, PP);
-        (p2[0], p2[1]) = EllipticCurve.ecMul(params[3], gk[0], gk[1], AA, PP);
+        (p2[0], p2[1]) = EllipticCurve.ecMul(params[3], GK[0], GK[1], AA, PP);
         (p1[0], p1[1]) = EllipticCurve.ecAdd(
             p2[0],
             p2[1],
@@ -450,14 +442,14 @@ contract BinaryVote {
         return true;
     }
 
-    /// @dev Verify the zk proof proving the knowledge of authority private key 
+    /// @dev Verify the zk proof proving the knowledge of authority private key
     function verifyECFSProof(
         address data,
-        uint256[2] storage h,
-        uint256[2] storage y,
-        uint256[2] storage t,
+        uint256[2] memory h,
+        uint256[2] memory y,
+        uint256[2] memory t,
         uint256 r
-    ) internal view returns (bool) {
+    ) internal pure returns (bool) {
         uint256[2] memory p1;
         uint256[2] memory p2;
 
@@ -481,7 +473,19 @@ contract BinaryVote {
         return true;
     }
 
-    event RegAuthPubKey(uint256 indexed gkX, uint256 indexed gkY);
-    event Cast(address indexed from, bytes32 indexed ballotHash);
-    event Tally(uint256 indexed V, bytes32 indexed tallyHash);
+    function getByteVal(uint256 b, uint256 i) internal pure returns (uint8) {
+        return uint8((b >> (i * 8)) & 0xff);
+    }
+
+    function getECPoint(uint256 x, uint8 prefix)
+        internal
+        pure
+        returns (uint256[2] memory)
+    {
+        uint256[2] memory p;
+        p[0] = x;
+        p[1] = EllipticCurve.deriveY(prefix, x, AA, BB, PP);
+
+        return p;
+    }
 }
