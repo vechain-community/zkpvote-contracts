@@ -7,7 +7,6 @@ const fs = require('fs')
 import {
     accounts,
     abiVotingContract,
-    // invalidBallots,
     infoFile
 } from './init'
 
@@ -21,21 +20,6 @@ import {
     const info = JSON.parse(fs.readFileSync(infoFile, 'utf8'))
     const addrVotingContract = info.addrVotingContract
     const voteID = info.voteID
-
-    // // Verify invalid ballots
-    // for (let i = 0; i < invalidBallots.length; i++) {
-    //     const addr = invalidBallots[i]
-    //     const out = await connexutils.contractCall(
-    //         connex, addrVotingContract,
-    //         utils.getABI(abiVotingContract, 'verifyBallot', 'function'),
-    //         voteID, addr
-    //     )
-    //     if (out.decoded[0]) {
-    //         console.log('Verify invalid ballots: FAIL')
-    //         console.log('\taddress: ', addr)
-    //     }
-    // }
-    // console.log('Verify invalid ballots: PASS')
 
     // Verify tally result
     let out = await connexutils.contractCall(

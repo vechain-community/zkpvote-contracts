@@ -23,7 +23,7 @@ const abiVotingContract = JSON.parse(utils.getSolcABI('./contracts/VotingContrac
 
 const authPubKey = JSON.parse(fs.readFileSync('./test/data/auth-pub-key.json', 'utf8'))
 const infoFile = './test/data/info.json'
-const logFile = './test/data/log.txt'
+// const logFile = './test/data/log.txt'
 
 const ballots = JSON.parse(fs.readFileSync('./test/data/bin-ballot.json', 'utf8'))
 const tallyRes = JSON.parse(fs.readFileSync('./test/data/bin-tally-res.json', 'utf8'))

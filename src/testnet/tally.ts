@@ -4,6 +4,8 @@ import { utils, connexutils } from 'myvetools'
 
 const fs = require('fs')
 
+import { pre } from '../utils'
+
 import {
     accounts,
     abiVotingContract,
@@ -37,18 +39,14 @@ import {
 
     // The authority will off-chain download and validate all the ballots
     // and tally and upload the result that can be verified by anyone.
+    const r = prepTallyRes(tallyRes)
     resp = await connexutils.contractCallWithTx(
         connex, auth, 1000000,
         addrVotingContract, '0x0',
         utils.getABI(abiVotingContract, 'setTallyRes', 'function'),
         voteID,
         invalidBallots,
-        tallyRes.v,
-        [tallyRes.xx, tallyRes.xy],
-        [tallyRes.yx, tallyRes.yy],
-        [tallyRes.proof.hx, tallyRes.proof.hy],
-        [tallyRes.proof.tx, tallyRes.proof.ty],
-        tallyRes.proof.r,
+        r.v, r.x, r.y, r.proof, r.prefix
     )
     rec = await connexutils.getReceipt(connex, 5, resp.txid)
     console.log('Tally result uploaded:')
@@ -67,3 +65,21 @@ import {
     console.log('\ttxid: ', resp.txid)
     console.log('\tgas used:', rec.gasUsed)
 })()
+
+function prepTallyRes(r: any): any {
+    const p = r.proof
+
+    let prefix: string = '0x'
+    prefix += pre(r.xy)
+    prefix += pre(r.yy)
+    prefix += pre(p.hy)
+    prefix += pre(p.ty)
+
+    return {
+        v: r.v,
+        x: r.xx,
+        y: r.yx,
+        proof: [p.hx, p.tx, p.r],
+        prefix: prefix
+    }
+}

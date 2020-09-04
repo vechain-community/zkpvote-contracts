@@ -8,8 +8,10 @@ const fs = require('fs')
 import {
     accounts,
     abiVoteCreator, abiVotingContract,
-    authPubKey, infoFile
+    authPubKey, infoFile, tallyRes
 } from './init'
+
+import {pre} from '../utils'
 
 (async () => {
     const wallet = new SimpleWallet()
@@ -47,7 +49,7 @@ import {
         connex, auth, 300000,
         addrVotingContract, '0x0',
         utils.getABI(abiVotingContract, 'setAuthPubKey', 'function'),
-        voteID, [authPubKey.gkx, authPubKey.gky]
+        voteID, authPubKey.gkx, '0x' + pre(authPubKey.gky)
     )
     rec = await connexutils.getReceipt(connex, 5, resp.txid)
     

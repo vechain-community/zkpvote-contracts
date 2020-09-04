@@ -11,6 +11,7 @@ import {
     authPubKey,
     infoFile
 } from './init'
+import { rawToNormBallot, pre } from '../utils'
 
 (async () => {
     const wallet = new SimpleWallet()
@@ -34,50 +35,40 @@ import {
     for (let i = 0; i < n; i++) {
         out = await connexutils.contractCall(
             connex, addrVotingContract,
-            utils.getABI(abiVotingContract, 'getVoter','function'),
+            utils.getABI(abiVotingContract, 'getVoter', 'function'),
             voteID, i
         )
         const addr = out.decoded[0]
 
         out = await connexutils.contractCall(
             connex, addrVotingContract,
-            utils.getABI(abiVotingContract, 'getBallot','function'),
+            utils.getABI(abiVotingContract, 'getBallot', 'function'),
             voteID, addr
         )
-        const ballot = {
-            hx: toHex(out.decoded[0][0]),
-            hy: toHex(out.decoded[0][1]),
-            yx: toHex(out.decoded[1][0]),
-            yy: toHex(out.decoded[1][1]),
-            proof: {
-                data: addr,
-                gkx: authPubKey.gkx,
-                gky: authPubKey.gky,
-                d1: toHex(out.decoded[2][0]),
-                r1: toHex(out.decoded[2][1]),
-                d2: toHex(out.decoded[2][2]),
-                r2: toHex(out.decoded[2][3]),
-                a1x: toHex(out.decoded[3][0]),
-                a1y: toHex(out.decoded[3][1]),
-                b1x: toHex(out.decoded[4][0]),
-                b1y: toHex(out.decoded[4][1]),
-                a2x: toHex(out.decoded[5][0]),
-                a2y: toHex(out.decoded[5][1]),
-                b2x: toHex(out.decoded[6][0]),
-                b2y: toHex(out.decoded[6][1]),
-            }
+
+        const raw = {
+            h: new BN(out.decoded[0]),
+            y: new BN(out.decoded[1]),
+            proof: [
+                new BN(out.decoded[2][0]),
+                new BN(out.decoded[2][1]),
+                new BN(out.decoded[2][2]),
+                new BN(out.decoded[2][3]),
+                new BN(out.decoded[2][4]),
+                new BN(out.decoded[2][5]),
+                new BN(out.decoded[2][6]),
+                new BN(out.decoded[2][7]),
+            ],
+            prefix: new BN(out.decoded[3])
         }
+
+        let ballot = rawToNormBallot(raw)
+        ballot.proof.data = addr
+        ballot.proof.gkx = authPubKey.gkx
+        ballot.proof.gky = authPubKey.gky
+
         dl.push(ballot)
     }
 
     fs.writeFileSync('./test/data/dl-bin-ballot.json', JSON.stringify(dl))
 })()
-
-function toHex(numStr: string): string {
-    let hexStr = new BN(numStr).toString(16)
-    if(hexStr.length % 2 != 0){
-        hexStr = '0' + hexStr
-    }
-
-    return '0x' + hexStr
-}

@@ -1,6 +1,7 @@
 import { Framework } from '@vechain/connex-framework'
 import { Driver, SimpleNet, SimpleWallet, options } from '@vechain/connex-driver'
 import { utils, connexutils } from 'myvetools'
+import { pre } from '../utils'
 
 const fs = require('fs')
 
@@ -32,12 +33,12 @@ import {
     // 3 are invalid. They will be cast by accounts[1:9].
     /////////////////////////////////////////////////////////////////
     for (let i = 0; i < ballots.length; i++) {
-        const d = prepBallotCast(ballots[i])
+        const b = prepBallotCast(ballots[i])
         connexutils.contractCallWithTx(
             connex, accounts[i + 1].pubKey, 1000000,
             addrVotingContract, '0x0',
             utils.getABI(abiVotingContract, 'cast', 'function'),
-            voteID, d.ga, d.y, d.params, d.a1, d.b1, d.a2, d.b2
+            voteID, b.h, b.y, b.zkp, b.prefix
         )
             .then(resp => {
                 connexutils.getReceipt(connex, 5, resp.txid)
@@ -55,15 +56,21 @@ import {
 
 })()
 
-function prepBallotCast(b: any) {
+function prepBallotCast(b: any): any {
     const p = b.proof
+
+    let prefix: string = '0x'
+    prefix += pre(b.hy)
+    prefix += pre(b.yy)
+    prefix += pre(p.a1y)
+    prefix += pre(p.b1y)
+    prefix += pre(p.a2y)
+    prefix += pre(p.b2y)
+
     return {
-        ga: [b.hx, b.hy],
-        y: [b.yx, b.yy],
-        params: [p.d1, p.r1, p.d2, p.r2],
-        a1: [p.a1x, p.a1y],
-        b1: [p.b1x, p.b1y],
-        a2: [p.a2x, p.a2y],
-        b2: [p.b2x, p.b2y]
+        h: b.hx,
+        y: b.yx,
+        zkp: [p.d1, p.r1, p.d2, p.r2, p.a1x, p.b1x, p.a2x, p.b2x],
+        prefix: prefix
     }
 }
