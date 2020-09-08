@@ -1,7 +1,7 @@
 import { Framework } from '@vechain/connex-framework'
 import { Driver, SimpleNet, SimpleWallet, options } from '@vechain/connex-driver'
 import { utils, connexutils } from 'myvetools'
-import { pre } from '../utils'
+import { pre } from './utils'
 
 const fs = require('fs')
 
