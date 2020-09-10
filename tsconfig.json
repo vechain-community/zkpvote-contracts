@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "ES6",
+        "esModuleInterop": true,
+        "alwaysStrict": true
+    },
+    "exclude": [
+        "node_modules",
+        "testnet",
+        "test"
+    ]
+}   

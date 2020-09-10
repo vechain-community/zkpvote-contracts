@@ -1,27 +1,17 @@
 import { randomBytes } from 'crypto'
 import BN from 'bn.js'
 
-const A = new BN('ffffffff00000001000000000000000000000000fffffffffffffffffffffffc', 16)
-const B = new BN('5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b', 16)
-const P = new BN('ffffffff00000001000000000000000000000000ffffffffffffffffffffffff', 16)
-const N = Buffer.from('ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551', 'hex');
-const ZERO = Buffer.alloc(32, 0)
+import {a as A, b as B, p as P, n as N} from './common'
 
-function isValidPower(p: Buffer): boolean {
-    return Buffer.isBuffer(p) &&
-        p.length === 32 &&
-        !p.equals(ZERO) &&
-        p.compare(N) < 0
+export function isValidPower(x: BN): boolean {
+    return x.gt(new BN(0)) && x.lt(N)
 }
 
-/**
- * Randomly sample an integer that is within range (1, p256.N)
- */
 export function randPower(): BN {
     for (; ;) {
-        const n = randomBytes(32)
-        if (isValidPower(n)) {
-            return new BN(n)
+        const x = new BN(randomBytes(32))
+        if (isValidPower(x)) {
+            return x
         }
     }
 }

@@ -7,9 +7,11 @@
     "test": "test"
   },
   "dependencies": {
+    "@types/bn.js": "^4.11.6",
     "@vechain/connex-driver": "^1.2.1",
     "@vechain/connex-framework": "^1.1.4",
     "elliptic": "^6.5.3",
+    "hash.js": "^1.1.7",
     "myvetools": "^1.0.11"
   },
   "devDependencies": {},

@@ -1,20 +1,9 @@
 import BN from 'bn.js'
-const curves = require('elliptic').curves
-import { randomBytes } from 'crypto'
+import hash = require('hash.js')
 
-// import { randPower } from './utils'
+import { ECP, g, n } from './common'
+import { randPower, isValidPower } from './utils'
 import { isAddress } from 'myvetools/dist/utils'
-
-interface ECP {
-    mul(x: BN): ECP;
-    add(x: ECP): ECP;
-
-    validate(): boolean;
-    eq(x: ECP): boolean;
-
-    getX(): BN;
-    getY(): BN;
-}
 
 type Proof = {
     address: string,
@@ -38,21 +27,6 @@ type Prover = {
     gk: ECP
 }
 
-const p256 = curves.p256
-
-function isValidPower(x: BN): boolean {
-    return x.gt(new BN(0)) && x.lt(p256.n)
-}
-
-function randPower(): BN {
-    for (; ;) {
-        const x = new BN(randomBytes(32))
-        if (isValidPower(x)) {
-            return x
-        }
-    }
-}
-
 export function prove(p: Prover): Proof {
     const { a, address, v, gk } = p
 
@@ -68,8 +42,6 @@ export function prove(p: Prover): Proof {
         throw new Error('Invalid public key gk')
     }
 
-    const g: ECP = p256.g
-    const n: BN = p256.n
     const ga: ECP = g.mul(a)
 
     // console.log(n.toString(16, 32))
@@ -104,7 +76,7 @@ export function prove(p: Prover): Proof {
 
         // c = hash(data, g^a, y, a1, b1, a2, b2)
         c = new BN(
-            p256.hash()
+            hash.sha256()
                 .update(address.slice(2))
                 .update(ga.getX().toString(16, 32)).update(ga.getY().toString(16, 32))
                 .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
@@ -147,7 +119,7 @@ export function prove(p: Prover): Proof {
 
         // c = hash(data, g^a, y, a1, b1, a2, b2)
         c = new BN(
-            p256.hash()
+            hash.sha256()
                 .update(address.slice(2))
                 .update(ga.getX().toString(16, 32)).update(ga.getY().toString(16, 32))
                 .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
@@ -185,8 +157,6 @@ export function prove(p: Prover): Proof {
 }
 
 export function verify(p: Proof): boolean {
-    const n: BN = p256.n
-    const g: ECP = p256.g
     const { address, ga, gk, y, d1, r1, d2, r2, a1, b1, a2, b2 } = p
 
     // check ec points
@@ -208,7 +178,7 @@ export function verify(p: Proof): boolean {
 
     // d1 + d2 == c mod N
     const c = new BN(
-        p256.hash()
+        hash.sha256()
             .update(address.slice(2))
             .update(ga.getX().toString(16, 32)).update(ga.getY().toString(16, 32))
             .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
