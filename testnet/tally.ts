@@ -4,7 +4,7 @@ import { utils, connexutils } from 'myvetools'
 
 const fs = require('fs')
 
-import { pre } from '../utils'
+import { pre } from './utils'
 
 import {
     accounts,
@@ -64,6 +64,8 @@ import {
     console.log('Tally ends:')
     console.log('\ttxid: ', resp.txid)
     console.log('\tgas used:', rec.gasUsed)
+
+    driver.close()
 })()
 
 function prepTallyRes(r: any): any {

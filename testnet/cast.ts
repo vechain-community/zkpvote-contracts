@@ -54,6 +54,7 @@ import {
             })
     }
 
+    driver.close()
 })()
 
 function prepBallotCast(b: any): any {

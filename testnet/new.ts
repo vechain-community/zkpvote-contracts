@@ -11,7 +11,7 @@ import {
     authPubKey, infoFile, tallyRes
 } from './init'
 
-import {pre} from '../utils'
+import {pre} from './utils'
 
 (async () => {
     const wallet = new SimpleWallet()
@@ -63,4 +63,6 @@ import {pre} from '../utils'
         addrVotingContract: addrVotingContract,
         voteID: voteID
     }))
+
+    driver.close()
 })()

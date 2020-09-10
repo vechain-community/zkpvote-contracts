@@ -11,7 +11,7 @@ import {
     authPubKey,
     infoFile
 } from './init'
-import { rawToNormBallot, pre } from '../utils'
+import { rawToNormBallot, pre } from './utils'
 
 (async () => {
     const wallet = new SimpleWallet()
@@ -71,4 +71,6 @@ import { rawToNormBallot, pre } from '../utils'
     }
 
     fs.writeFileSync('./test/data/dl-bin-ballot.json', JSON.stringify(dl))
+
+    driver.close()
 })()

@@ -1,21 +1,10 @@
-const BN = require('bn.js')
+import BN from 'bn.js'
 
 const _a = new BN('ffffffff00000001000000000000000000000000fffffffffffffffffffffffc', 16)
 const _b = new BN('5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b', 16)
 const _p = new BN('ffffffff00000001000000000000000000000000ffffffffffffffffffffffff', 16)
 
-interface bigNumber {
-    mod(x: bigNumber): bigNumber,
-    clone(): bigNumber,
-    isZero(): boolean,
-    div(x: bigNumber): bigNumber,
-    mul(x: bigNumber): bigNumber,
-    add(x: bigNumber): bigNumber,
-    toBuffer(endian: string, length?: number): number[],
-    toString(base: number, length?: number): string
-}
-
-function _expMod(a: bigNumber, b: bigNumber, n: bigNumber): bigNumber {
+function _expMod(a: BN, b: BN, n: BN): BN {
     a = a.mod(n)
     let result = new BN(1)
     let x = a.clone()
@@ -33,7 +22,7 @@ function _expMod(a: bigNumber, b: bigNumber, n: bigNumber): bigNumber {
     return result
 }
 
-function _deriveY(x: bigNumber, prefix: bigNumber) {
+function _deriveY(x: BN, prefix: BN) {
     let y = _expMod(x, new BN(3), _p)
     y = y.add(x.mul(_a).mod(_p)).mod(_p)
     y = y.add(_b).mod(_p)
@@ -44,10 +33,10 @@ function _deriveY(x: bigNumber, prefix: bigNumber) {
 }
 
 interface rawBallot {
-    h: bigNumber,
-    y: bigNumber,
-    proof: bigNumber[],
-    prefix: bigNumber
+    h: BN,
+    y: BN,
+    proof: BN[],
+    prefix: BN
 }
 
 export function rawToNormBallot(raw: rawBallot): any {
