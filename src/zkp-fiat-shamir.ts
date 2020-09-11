@@ -12,7 +12,7 @@ type Prover = {
     address: string
 }
 
-type Proof = {
+export type Proof = {
     address: string,
     h: ECP,
     y: ECP,

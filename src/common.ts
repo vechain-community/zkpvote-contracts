@@ -13,8 +13,12 @@ export interface ECP {
 }
 
 const p256 = curves.p256
-export const g: ECP = p256.g
-export const n: BN = p256.n
-export const p: BN = p256.p
-export const a: BN = p256.a
-export const b: BN = p256.b
+export const g: ECP = p256.curve.g
+export const n: BN = p256.curve.n
+export const p: BN = p256.curve.p
+export const a: BN = p256.curve.a
+export const b: BN = p256.curve.b
+
+export function point(x: BN | string, y: BN | string): ECP {
+    return p256.curve.point(x, y, false)
+}

@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto'
 import BN from 'bn.js'
 
-import {a as A, b as B, p as P, n as N} from './common'
+import {a as A, b as B, p as P, n as N, ECP, point} from './common'
 
 export function isValidPower(x: BN): boolean {
     return x.gt(new BN(0)) && x.lt(N)
@@ -62,4 +62,11 @@ export function pre(s: string, t: 'string' | 'number'): string | number {
         return v % 2 == 0 ? '02' : '03'
     }
     return v % 2 == 0 ? 2 : 3
+}
+
+export function ecInv(x: ECP): ECP {
+    return point(
+        x.getX(),
+        P.sub(x.getY())
+    )
 }

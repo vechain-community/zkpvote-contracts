@@ -5,7 +5,7 @@ import { ECP, g, n } from './common'
 import { randPower, isValidPower } from './utils'
 import { isAddress } from 'myvetools/dist/utils'
 
-type Proof = {
+export type Proof = {
     address: string,
     ga: ECP,
     gk: ECP,
