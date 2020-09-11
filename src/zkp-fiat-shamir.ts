@@ -1,7 +1,7 @@
 import BN from 'bn.js'
 import hash = require('hash.js')
 
-import { ECP, n } from './common'
+import { ECP, n } from './ec'
 import { randPower, isValidPower } from './utils'
 import { isAddress } from 'myvetools/dist/utils'
 

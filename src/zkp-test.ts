@@ -3,7 +3,7 @@ const assert = require('assert').strict
 const EC = require('elliptic').ec
 import BN from 'bn.js'
 
-import { ECP } from './common'
+import { ECP } from './ec'
 import * as BNZKP from './zkp-binary-value'
 import * as FSZKP from './zkp-fiat-shamir'
 

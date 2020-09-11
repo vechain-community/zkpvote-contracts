@@ -1,7 +1,7 @@
 import BN from 'bn.js'
 import hash = require('hash.js')
 
-import { ECP, g, n } from './common'
+import { ECP, g, n } from './ec'
 import { randPower, isValidPower } from './utils'
 import { isAddress } from 'myvetools/dist/utils'
 
@@ -51,7 +51,7 @@ export function prove(p: Prover): Proof {
     let y: ECP, a1: ECP, b1: ECP, a2: ECP, b2: ECP
     let r1: BN, d1: BN, r2: BN, d2: BN, c: BN
 
-    if (v) {
+    if (!v) {
         r2 = randPower()
         d2 = randPower()
 

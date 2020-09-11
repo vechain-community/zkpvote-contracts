@@ -1,7 +1,7 @@
 import BN from 'bn.js'
 
-import { ECP, g } from './common'
-import { ecInv, isValidPower } from './utils'
+import { ECP, g, inv, toHex } from './ec'
+import { isValidPower, pre } from './utils'
 import { Ballot, verifyBallot } from './binary-ballot'
 import { Proof, prove } from './zkp-fiat-shamir'
 import { isAddress } from 'myvetools/dist/utils'
@@ -68,7 +68,7 @@ export function tally(t: Tally): Res {
     const nValidBallot = t.ballots.length - invalidBallots.length
     if (!X.eq(Y)) { // only run the loop if there is at least one yes vote
         // g^v = Y/X
-        const gV = Y.add(ecInv(X))
+        const gV = Y.add(inv(X))
 
         for (V = 1; V <= nValidBallot; V++) {
             if (gV.eq(g.mul(new BN(V)))) {
@@ -109,4 +109,35 @@ export function verifyTallyRes(r: Res): boolean {
     }
 
     return true
+}
+
+type ResForTally = {
+    V: number,
+    X: string,
+    Y: string,
+    zkp: string[],
+    prefix: string
+}
+
+export function prepTallyRes(res: Res): ResForTally {
+    const { V, X, Y, proof } = res
+    const { h , t, r } = proof
+
+    let prefix: string = '0x'
+    prefix += pre(toHex(X, 'y'))
+    prefix += pre(toHex(Y, 'y'))
+    prefix += pre(toHex(h, 'y'))
+    prefix += pre(toHex(t, 'y'))
+
+    return {
+        V: V,
+        X: toHex(X, 'x'),
+        Y: toHex(Y, 'x'),
+        zkp: [
+            toHex(h, 'x'), 
+            toHex(t, 'x'), 
+            '0x' + r.toString(16, 32)
+        ],
+        prefix: prefix
+    }
 }
