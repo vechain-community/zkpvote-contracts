@@ -24,3 +24,11 @@ export function pre(s: string): string {
 export function randAddress(): string {
     return '0x' + new BN(randomBytes(20)).toString('hex', 20)
 }
+
+export function toHex(x: number | string | BN, enc = 16, len = 32): string {
+    if (len <= 0 || len % 2 != 0) {
+        throw new Error('Invalid hex string length')
+    }
+
+    return '0x' + new BN(x, enc).toString('hex', len)
+}
