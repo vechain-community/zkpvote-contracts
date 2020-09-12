@@ -38,11 +38,11 @@ import {pre} from './utils'
     // 3. VoteCreator.NewBinaryVote
     const voteID = rec.outputs[0].events[1].topics[1]
 
-    console.log('Vote created:')
-    console.log('\tvoteID: ', voteID)
-    console.log('\ttxid: ', resp.txid)
-    console.log('\tauth: ', auth)
-    console.log('\tgas used:', rec.gasUsed)
+    console.log(`Vote created:
+    voteID: ${voteID}
+    txid: ${resp.txid}
+    auth: ${auth}
+    gas used: ${rec.gasUsed}`)
 
     // Calling VotingContract.setAuthPubKey to set the authority public key
     resp = await connexutils.contractCallWithTx(
@@ -53,16 +53,14 @@ import {pre} from './utils'
     )
     rec = await connexutils.getReceipt(connex, 5, resp.txid)
     
-    console.log('Set authority public key:')
-    console.log('\ttxid: ', resp.txid)
-    console.log('\tPubKey: [', authPubKey.gkx, ', ', authPubKey.gky, ']')
-    console.log('\tgas used:', rec.gasUsed)
+    console.log(`Set authority public key:
+    txid: ${resp.txid})
+    PubKey: [${authPubKey.gkx}, ${authPubKey.gky}]
+    gas used: ${rec.gasUsed}`)
 
     fs.writeFileSync(infoFile, JSON.stringify({
         addrVoteCreator: addrVoteCreator,
         addrVotingContract: addrVotingContract,
         voteID: voteID
     }))
-
-    driver.close()
 })()
