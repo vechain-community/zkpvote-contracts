@@ -8,88 +8,105 @@ import { isAddress } from 'myvetools/dist/utils'
 import { invalidBallots } from '../testnet/init'
 import { verify } from './zkp-fiat-shamir'
 
-type Tally = {
-    k: BN,
-    address: string,
-    ballots: Ballot[]
-}
-
 type Res = {
     V: number,
     X: ECP,
     Y: ECP,
     proof: Proof,
     invalidBallots: string[]
-    nBallot: number
+    total: number
 }
 
-export function tally(t: Tally): Res {
-    if (!isValidPower(t.k)) {
-        throw new Error('Invalid private key')
-    }
+export class Tally {
+    k: BN
+    address: string
 
-    if (!isAddress(t.address)) {
-        throw new Error('Invalid account address')
-    }
+    invalids: string[]
+    invalidSet: Set<string>
+    validSet: Set<string>
 
-    // Verify ballots & aggregate h and y
-    let invalidBallots: string[] = []
-    let H: ECP, Y: ECP
-    t.ballots.filter(ballot => {
-        if (!verifyBallot(ballot)) {
-            invalidBallots.push(ballot.proof.address)
-            return false
+    H: ECP
+    Y: ECP
+
+    constructor(k: BN, address: string) {
+        if (!isValidPower(k)) {
+            throw new Error('Invalid private key')
         }
 
-        if (typeof H === 'undefined') {
-            H = ballot.h
-            Y = ballot.y
+        if (!isAddress(address)) {
+            throw new Error('Invalid account address')
+        }
+
+        this.k = k
+        this.address = address
+    }
+
+    count(b: Ballot) {
+        const addr = b.proof.address
+        if (!isAddress(addr)) {
+            throw new Error('Invalid account address')
+        }
+
+        if (this.invalidSet.has(addr) || this.validSet.has(addr)) {
+            return
+        }
+
+        if (verifyBallot(b)) {
+            if (typeof this.H === 'undefined') {
+                this.H = b.h
+                this.Y = b.y
+            } else {
+                this.H = this.H.add(b.h)
+                this.Y = this.Y.add(b.y)
+            }
+
+            this.validSet.add(b.proof.address)
         } else {
-            H = H.add(ballot.h)
-            Y = Y.add(ballot.y)
+            this.invalidSet.add(b.proof.address)
+            this.invalids.push(addr)
         }
+    }
 
-        return true
-    })
+    getRes(): Res {
+        // X = H^k
+        const X = this.H.mul(this.k)
 
-    // X = H^k
-    const X = H.mul(t.k)
+        // Generate Proof of k
+        const proof: Proof = prove({
+            address: this.address,
+            h: this.H,
+            y: X,
+            x: this.k
+        })
 
-    // Generate Proof of k
-    const proof: Proof = prove({
-        address: t.address,
-        h: H,
-        y: X,
-        x: t.k
-    })
+        // Compute the number of yes votes, V
+        let V = 0
+        const nValidBallot = this.validSet.size
+        if (!X.eq(this.Y)) { // only run the loop if there is at least one yes vote
+            // g^v = Y/X
+            const gV = this.Y.add(inv(X))
 
-    // Compute the number of yes votes, V
-    let V = 0
-    const nValidBallot = t.ballots.length - invalidBallots.length
-    if (!X.eq(Y)) { // only run the loop if there is at least one yes vote
-        // g^v = Y/X
-        const gV = Y.add(inv(X))
-
-        for (V = 1; V <= nValidBallot; V++) {
-            if (gV.eq(g.mul(new BN(V)))) {
-                break
+            for (V = 1; V <= nValidBallot; V++) {
+                if (gV.eq(g.mul(new BN(V)))) {
+                    break
+                }
             }
         }
-    }
 
-    return {
-        V: V,
-        X: X,
-        Y: Y,
-        proof: proof,
-        invalidBallots: invalidBallots,
-        nBallot: t.ballots.length
+        return {
+            V: V,
+            X: X,
+            Y: this.Y,
+            proof: proof,
+            invalidBallots: this.invalids,
+            total: this.validSet.size + this.invalidSet.size
+        }
     }
 }
 
 export function verifyTallyRes(r: Res): boolean {
     // Check range of V
-    if (r.V < 0 || r.V > r.nBallot-invalidBallots.length) {
+    if (r.V < 0 || r.V > r.total - invalidBallots.length) {
         return false
     }
 
@@ -121,7 +138,7 @@ type ResForTally = {
 
 export function prepTallyRes(res: Res): ResForTally {
     const { V, X, Y, proof } = res
-    const { h , t, r } = proof
+    const { h, t, r } = proof
 
     let prefix: string = '0x'
     prefix += pre(toHex(X, 'y'))
@@ -134,8 +151,8 @@ export function prepTallyRes(res: Res): ResForTally {
         X: toHex(X, 'x'),
         Y: toHex(Y, 'x'),
         zkp: [
-            toHex(h, 'x'), 
-            toHex(t, 'x'), 
+            toHex(h, 'x'),
+            toHex(t, 'x'),
             '0x' + r.toString(16, 32)
         ],
         prefix: prefix
