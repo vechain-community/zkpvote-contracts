@@ -41,7 +41,7 @@ export function verifyBallot(b: Ballot): boolean {
     return verify(proof)
 }
 
-type CompressedBallot = {
+export type CompressedBallot = {
     h: string,
     y: string,
     zkp: string[],
