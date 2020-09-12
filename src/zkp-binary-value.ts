@@ -77,13 +77,13 @@ export function prove(p: Prover): Proof {
         // c = hash(data, g^a, y, a1, b1, a2, b2)
         c = new BN(
             hash.sha256()
-                .update(address.slice(2))
-                .update(ga.getX().toString(16, 32)).update(ga.getY().toString(16, 32))
-                .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
-                .update(a1.getX().toString(16, 32)).update(a1.getY().toString(16, 32))
-                .update(b1.getX().toString(16, 32)).update(b1.getY().toString(16, 32))
-                .update(a2.getX().toString(16, 32)).update(a2.getY().toString(16, 32))
-                .update(b2.getX().toString(16, 32)).update(b2.getY().toString(16, 32))
+                .update(address.slice(2), 'hex')
+                .update(ga.getX().toString(16, 32), 'hex').update(ga.getY().toString(16, 32), 'hex')
+                .update(y.getX().toString(16, 32), 'hex').update(y.getY().toString(16, 32), 'hex')
+                .update(a1.getX().toString(16, 32), 'hex').update(a1.getY().toString(16, 32), 'hex')
+                .update(b1.getX().toString(16, 32), 'hex').update(b1.getY().toString(16, 32), 'hex')
+                .update(a2.getX().toString(16, 32), 'hex').update(a2.getY().toString(16, 32), 'hex')
+                .update(b2.getX().toString(16, 32), 'hex').update(b2.getY().toString(16, 32), 'hex')
                 .digest('hex'),
             'hex'
         )
@@ -120,13 +120,13 @@ export function prove(p: Prover): Proof {
         // c = hash(data, g^a, y, a1, b1, a2, b2)
         c = new BN(
             hash.sha256()
-                .update(address.slice(2))
-                .update(ga.getX().toString(16, 32)).update(ga.getY().toString(16, 32))
-                .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
-                .update(a1.getX().toString(16, 32)).update(a1.getY().toString(16, 32))
-                .update(b1.getX().toString(16, 32)).update(b1.getY().toString(16, 32))
-                .update(a2.getX().toString(16, 32)).update(a2.getY().toString(16, 32))
-                .update(b2.getX().toString(16, 32)).update(b2.getY().toString(16, 32))
+                .update(address.slice(2), 'hex')
+                .update(ga.getX().toString(16, 32), 'hex').update(ga.getY().toString(16, 32), 'hex')
+                .update(y.getX().toString(16, 32), 'hex').update(y.getY().toString(16, 32), 'hex')
+                .update(a1.getX().toString(16, 32), 'hex').update(a1.getY().toString(16, 32), 'hex')
+                .update(b1.getX().toString(16, 32), 'hex').update(b1.getY().toString(16, 32), 'hex')
+                .update(a2.getX().toString(16, 32), 'hex').update(a2.getY().toString(16, 32), 'hex')
+                .update(b2.getX().toString(16, 32), 'hex').update(b2.getY().toString(16, 32), 'hex')
                 .digest('hex'),
             'hex'
         )
@@ -179,13 +179,13 @@ export function verify(p: Proof): boolean {
     // d1 + d2 == c mod N
     const c = new BN(
         hash.sha256()
-            .update(address.slice(2))
-            .update(ga.getX().toString(16, 32)).update(ga.getY().toString(16, 32))
-            .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
-            .update(a1.getX().toString(16, 32)).update(a1.getY().toString(16, 32))
-            .update(b1.getX().toString(16, 32)).update(b1.getY().toString(16, 32))
-            .update(a2.getX().toString(16, 32)).update(a2.getY().toString(16, 32))
-            .update(b2.getX().toString(16, 32)).update(b2.getY().toString(16, 32))
+            .update(address.slice(2), 'hex')
+            .update(ga.getX().toString(16, 32), 'hex').update(ga.getY().toString(16, 32), 'hex')
+            .update(y.getX().toString(16, 32), 'hex').update(y.getY().toString(16, 32), 'hex')
+            .update(a1.getX().toString(16, 32), 'hex').update(a1.getY().toString(16, 32), 'hex')
+            .update(b1.getX().toString(16, 32), 'hex').update(b1.getY().toString(16, 32), 'hex')
+            .update(a2.getX().toString(16, 32), 'hex').update(a2.getY().toString(16, 32), 'hex')
+            .update(b2.getX().toString(16, 32), 'hex').update(b2.getY().toString(16, 32), 'hex')
             .digest('hex'),
         'hex'
     )

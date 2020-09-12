@@ -47,10 +47,10 @@ export function prove(p: Prover): Proof {
     // c = H(address, h, y, t)
     const c = new BN(
         hash.sha256()
-            .update(address.slice(2))
-            .update(h.getX().toString(16, 32)).update(h.getY().toString(16, 32))
-            .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
-            .update(t.getX().toString(16, 32)).update(t.getY().toString(16, 32))
+            .update(address.slice(2), 'hex')
+            .update(h.getX().toString(16, 32), 'hex').update(h.getY().toString(16, 32), 'hex')
+            .update(y.getX().toString(16, 32), 'hex').update(y.getY().toString(16, 32), 'hex')
+            .update(t.getX().toString(16, 32), 'hex').update(t.getY().toString(16, 32), 'hex')
             .digest('hex'),
         'hex'
     )
@@ -84,10 +84,10 @@ export function verify(p: Proof): boolean {
 
     const c = new BN(
         hash.sha256()
-            .update(address.slice(2))
-            .update(h.getX().toString(16, 32)).update(h.getY().toString(16, 32))
-            .update(y.getX().toString(16, 32)).update(y.getY().toString(16, 32))
-            .update(t.getX().toString(16, 32)).update(t.getY().toString(16, 32))
+            .update(address.slice(2), 'hex')
+            .update(h.getX().toString(16, 32), 'hex').update(h.getY().toString(16, 32), 'hex')
+            .update(y.getX().toString(16, 32), 'hex').update(y.getY().toString(16, 32), 'hex')
+            .update(t.getX().toString(16, 32), 'hex').update(t.getY().toString(16, 32), 'hex')
             .digest('hex'),
         'hex'
     )
