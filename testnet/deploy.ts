@@ -61,6 +61,4 @@ import {
         addrVoteCreator: addr1,
         addrVotingContract: addr2
     }))
-
-    driver.close()
 })()
