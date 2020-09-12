@@ -11,9 +11,7 @@ import { generateBallot, compressBallot, verifyBallot } from '../src/binary-ball
 import {
     accounts,
     abiVotingContract,
-    infoFile,
-    authPubKey
-    // ballots
+    infoFile
 } from './init'
 import BN = require('bn.js')
 
@@ -27,8 +25,10 @@ import BN = require('bn.js')
     const connex = new Framework(driver)
 
     const info = JSON.parse(fs.readFileSync(infoFile, 'utf8'))
-    const addrVotingContract = info.addrVotingContract
-    const voteID = info.voteID
+    const addrVotingContract: string = info.addrVotingContract
+    const voteID: string = info.voteID
+    const gkx: string = info.gkx
+    const gky: string = info.gky
 
     /////////////////////////////////////////////////////////////////
     // Cast ballots
@@ -40,12 +40,12 @@ import BN = require('bn.js')
     for (let i = 1; i < accounts.length; i++) {
         // Prepare ballot
         const a = randPower() // generate private key, a
-        const gk = point(authPubKey.gkx.slice(2), authPubKey.gky.slice(2))
+        const gk = point(new BN(gkx.slice(2), 'hex'), new BN(gky.slice(2), 'hex'))
         const address = accounts[i].pubKey
         const v = i % 2 == 0
 
         const ballot = generateBallot({ a: a, gk: gk, v: v, address: address })
-        
+
         // set d2 = d2 + 1 to invalidate ballot
         if (i > 6) {
             ballot.proof.d1 = ballot.proof.d1.add(new BN(1)).umod(n)
