@@ -1,16 +1,21 @@
+import fs = require('fs')
 import { Framework } from '@vechain/connex-framework'
 import { Driver, SimpleNet, SimpleWallet, options } from '@vechain/connex-driver'
 import { utils, connexutils } from 'myvetools'
-import { pre } from './utils'
 
-const fs = require('fs')
+import { randPower } from '../src/utils'
+import { point, n } from '../src/ec'
+import { generateBallot, compressBallot, verifyBallot } from '../src/binary-ballot'
+// import { pre } from './utils'
 
 import {
     accounts,
     abiVotingContract,
     infoFile,
-    ballots
+    authPubKey
+    // ballots
 } from './init'
+import BN = require('bn.js')
 
 (async () => {
     const wallet = new SimpleWallet()
@@ -32,10 +37,28 @@ import {
     // generated for this demo. The first 6 are valid while the last
     // 3 are invalid. They will be cast by accounts[1:9].
     /////////////////////////////////////////////////////////////////
-    for (let i = 0; i < ballots.length; i++) {
-        const b = prepBallotCast(ballots[i])
+    for (let i = 1; i < accounts.length; i++) {
+        // Prepare ballot
+        const a = randPower() // generate private key, a
+        const gk = point(authPubKey.gkx.slice(2), authPubKey.gky.slice(2))
+        const address = accounts[i].pubKey
+        const v = i % 2 == 0
+
+        const ballot = generateBallot({ a: a, gk: gk, v: v, address: address })
+        
+        // set d2 = d2 + 1 to invalidate ballot
+        if (i > 6) {
+            ballot.proof.d1 = ballot.proof.d1.add(new BN(1)).umod(n)
+            if (verifyBallot(ballot)) {
+                throw new Error(`Ballot ${i} should be invalid`)
+            }
+        }
+
+        const b = compressBallot(ballot)
+
+        // Cast ballot
         connexutils.contractCallWithTx(
-            connex, accounts[i + 1].pubKey, 1000000,
+            connex, accounts[i].pubKey, 1000000,
             addrVotingContract, '0x0',
             utils.getABI(abiVotingContract, 'cast', 'function'),
             voteID, b.h, b.y, b.zkp, b.prefix
@@ -43,35 +66,25 @@ import {
             .then(resp => {
                 connexutils.getReceipt(connex, 5, resp.txid)
                     .then((rec) => {
-                        console.log('Cast ballot:')
-                        console.log('\ttxid: ', resp.txid)
-                        console.log('\tby: ', resp.signer)
-                        console.log('\tgas used:', rec.gasUsed)
+                        console.log(`Cast ballot ${i}:
+    txid: ${resp.txid}
+    by: ${resp.signer}
+    gas used: ${rec.gasUsed}`)
+                        connexutils.contractCall(
+                            connex, addrVotingContract,
+                            utils.getABI(abiVotingContract, 'verifyBallot', 'function'),
+                            voteID, address
+                        ).then(out => {
+                            if (out.decoded[0] == 0) {
+                                console.log(`Invalid ballot ${i}:
+    address: ${address}`)
+                            }
+                        })
                     })
                     .catch(err => {
-                        console.log('Failed to cast ballot ', i + 1)
+                        console.log(`Failed to cast ballot ${i + 1}
+    Err: ${err}`)
                     })
             })
     }
-
-    driver.close()
 })()
-
-function prepBallotCast(b: any): any {
-    const p = b.proof
-
-    let prefix: string = '0x'
-    prefix += pre(b.hy)
-    prefix += pre(b.yy)
-    prefix += pre(p.a1y)
-    prefix += pre(p.b1y)
-    prefix += pre(p.a2y)
-    prefix += pre(p.b2y)
-
-    return {
-        h: b.hx,
-        y: b.yx,
-        zkp: [p.d1, p.r1, p.d2, p.r2, p.a1x, p.b1x, p.a2x, p.b2x],
-        prefix: prefix
-    }
-}
