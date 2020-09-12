@@ -8,10 +8,12 @@ const fs = require('fs')
 import {
     accounts,
     abiVoteCreator, abiVotingContract,
-    authPubKey, infoFile, tallyRes
+    infoFile
 } from './init'
 
-import {pre} from './utils'
+import { pre } from './utils'
+import { randPower, toHex as toHexBN } from '../src/utils'
+import { toHex as toHexEC, g } from '../src/ec'
 
 (async () => {
     const wallet = new SimpleWallet()
@@ -45,22 +47,29 @@ import {pre} from './utils'
     gas used: ${rec.gasUsed}`)
 
     // Calling VotingContract.setAuthPubKey to set the authority public key
+    const k = randPower()
+    const gk = g.mul(k)
+    const gkx = toHexEC(gk, 'x')
+    const gky = toHexEC(gk, 'y')
     resp = await connexutils.contractCallWithTx(
         connex, auth, 300000,
         addrVotingContract, '0x0',
         utils.getABI(abiVotingContract, 'setAuthPubKey', 'function'),
-        voteID, authPubKey.gkx, '0x' + pre(authPubKey.gky)
+        voteID, gkx, '0x' + pre(gky)
     )
     rec = await connexutils.getReceipt(connex, 5, resp.txid)
-    
+
     console.log(`Set authority public key:
     txid: ${resp.txid})
-    PubKey: [${authPubKey.gkx}, ${authPubKey.gky}]
+    PubKey: [${gkx}, ${gky}
     gas used: ${rec.gasUsed}`)
 
     fs.writeFileSync(infoFile, JSON.stringify({
         addrVoteCreator: addrVoteCreator,
         addrVotingContract: addrVotingContract,
-        voteID: voteID
+        voteID: voteID,
+        k: toHexBN(k),
+        gkx: gkx,
+        gky: gky
     }))
 })()
