@@ -20,7 +20,7 @@ const a = new BN('ffffffff00000001000000000000000000000000ffffffffffffffffffffff
 const b = new BN('5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b', 16)
 const p = new BN('ffffffff00000001000000000000000000000000ffffffffffffffffffffffff', 16)
 
-export function point(x: BN | string, y: BN | string): ECP {
+export function point(x: BN, y: BN): ECP {
     return p256.curve.point(x, y, false)
 }
 
