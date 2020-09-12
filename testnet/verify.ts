@@ -32,6 +32,4 @@ import {
     } else {
         console.log('Verify tally result: FAIL')
     }
-
-    driver.close()
 })()

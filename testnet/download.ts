@@ -71,6 +71,4 @@ import { rawToNormBallot, pre } from './utils'
     }
 
     fs.writeFileSync('./test/data/dl-bin-ballot.json', JSON.stringify(dl))
-
-    driver.close()
 })()
