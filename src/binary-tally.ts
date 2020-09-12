@@ -5,7 +5,6 @@ import { isValidPower, pre } from './utils'
 import { Ballot, verifyBallot } from './binary-ballot'
 import { Proof, prove } from './zkp-fiat-shamir'
 import { isAddress } from 'myvetools/dist/utils'
-import { invalidBallots } from '../testnet/init'
 import { verify } from './zkp-fiat-shamir'
 
 type Res = {
@@ -72,6 +71,10 @@ export class Tally {
     }
 
     getRes(): Res {
+        if (typeof this.H === 'undefined') {
+            throw new Error('No valid ballot counted')
+        }
+
         // X = H^k
         const X = this.H.mul(this.k)
 
@@ -110,7 +113,7 @@ export class Tally {
 
 export function verifyTallyRes(r: Res): boolean {
     // Check range of V
-    if (r.V < 0 || r.V > r.total - invalidBallots.length) {
+    if (r.V < 0 || r.V > r.total - r.invalidBallots.length) {
         return false
     }
 
@@ -137,7 +140,8 @@ type ResForTally = {
     X: string,
     Y: string,
     zkp: string[],
-    prefix: string
+    prefix: string,
+    invalidBallots: string[]
 }
 
 export function prepTallyRes(res: Res): ResForTally {
@@ -159,6 +163,7 @@ export function prepTallyRes(res: Res): ResForTally {
             toHex(t, 'x'),
             '0x' + r.toString(16, 32)
         ],
-        prefix: prefix
+        prefix: prefix,
+        invalidBallots: res.invalidBallots
     }
 }

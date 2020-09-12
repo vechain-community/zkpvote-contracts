@@ -1,7 +1,5 @@
 import { utils } from 'myvetools'
 
-const fs = require('fs')
-
 const accounts: { privKey: string, pubKey: string }[] = [
     { privKey: '0x3e61996a0a49b26a5608a55a3e0669aff271959d2e43658766e3514a07a5ccf3', pubKey: '0xCDFDFD58e986130445B560276f52CE7985809238' },
     { privKey: '0xfb36f708acfd7e220634c4f48228fc5640c55575e5b2824047e4fa740bc5b532', pubKey: '0x17faD1428DC464187C33C5EfD281aE7E58937Fd8' },
@@ -21,19 +19,11 @@ const abiVoteCreator = JSON.parse(utils.getSolcABI('./contracts/VoteCreator.sol'
 const binVotingContract = utils.getSolcBin('./contracts/VotingContract.sol', 'VotingContract')
 const abiVotingContract = JSON.parse(utils.getSolcABI('./contracts/VotingContract.sol', 'VotingContract'))
 
-const authPubKey = JSON.parse(fs.readFileSync('./test/data/auth-pub-key.json', 'utf8'))
 const infoFile = './test/data/info.json'
-// const logFile = './test/data/log.txt'
-
-const ballots = JSON.parse(fs.readFileSync('./test/data/bin-ballot.json', 'utf8'))
-const tallyRes = JSON.parse(fs.readFileSync('./test/data/bin-tally-res.json', 'utf8'))
-const invalidBallots = JSON.parse(fs.readFileSync('./test/data/invalid-bin-addr.json', 'utf8'))
 
 export {
     accounts,
     binVoteCreator, abiVoteCreator,
     binVotingContract, abiVotingContract,
-    authPubKey, 
     infoFile,
-    ballots, tallyRes, invalidBallots
 }

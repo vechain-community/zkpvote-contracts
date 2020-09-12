@@ -1,7 +1,7 @@
 import BN from 'bn.js'
 import hash = require('hash.js')
 
-import { ECP, g, n } from './ec'
+import { ECP, g, n, toHex } from './ec'
 import { randPower, isValidPower } from './utils'
 import { isAddress } from 'myvetools/dist/utils'
 
@@ -192,6 +192,17 @@ export function verify(p: Proof): boolean {
     if (!c.eq(d1.add(d2).umod(n))) {
         return false
     }
+
+    // console.log(`
+    // address: ${address}
+    // ga: (${toHex(ga,'x')}, ${toHex(ga, 'y')})
+    // y: (${toHex(y,'x')}, ${toHex(y, 'y')})
+    // a1: (${toHex(a1,'x')}, ${toHex(a1, 'y')})
+    // b1: (${toHex(b1,'x')}, ${toHex(b1, 'y')})
+    // a2: (${toHex(a2,'x')}, ${toHex(a2, 'y')})
+    // b2: (${toHex(b2,'x')}, ${toHex(b2, 'y')})
+    // c: ${c.toString(16, 32)}
+    // `)
 
     // a1 == g^{r1 + d1*a}
     const A1 = g.mul(r1).add(ga.mul(d1))
