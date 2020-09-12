@@ -39,10 +39,14 @@ export class Tally {
 
         this.k = k
         this.address = address
+        this.validSet = new Set()
+        this.invalidSet = new Set()
+        this.invalids = []
     }
 
     count(b: Ballot) {
         const addr = b.proof.address
+
         if (!isAddress(addr)) {
             throw new Error('Invalid account address')
         }
@@ -60,9 +64,9 @@ export class Tally {
                 this.Y = this.Y.add(b.y)
             }
 
-            this.validSet.add(b.proof.address)
+            this.validSet.add(addr)
         } else {
-            this.invalidSet.add(b.proof.address)
+            this.invalidSet.add(addr)
             this.invalids.push(addr)
         }
     }
