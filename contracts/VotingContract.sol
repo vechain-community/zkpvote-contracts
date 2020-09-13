@@ -75,7 +75,7 @@ contract VotingContract {
     function newBinaryVote(address auth, address voteContract) onlyCreator() external {
         bytes32 id = keccak256(abi.encode(auth, voteContract));
 
-        voteID[msg.sender].push(id);
+        voteID[auth].push(id);
         voteAddr[id] = address(voteContract);
         voteAuth[id] = auth;
 
