@@ -284,6 +284,10 @@ contract BinaryVote {
         return voters.length - nullVoters.length;
     }
 
+    function getState() external view returns (uint8) {
+        return uint8(state);
+    }
+
     /// @dev Verify H = prod_i(h_i) and Y = prod_i(y_i)
     /// @return true or false
     function verifyHAndY() internal view returns (bool) {

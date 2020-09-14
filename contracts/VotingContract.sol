@@ -46,6 +46,8 @@ contract BinaryVoteInterface {
             uint256[8] memory,
             uint256
         );
+
+    function getState() external view returns (uint8);
 }
 
 /// @title Voting Contract
@@ -65,14 +67,20 @@ contract VotingContract {
     }
 
     modifier onlyCreator() {
-        require(uint256(creator) > 0 && msg.sender == creator, "Require creator");
+        require(
+            uint256(creator) > 0 && msg.sender == creator,
+            "Require creator"
+        );
         _;
     }
 
     /// @dev Register a new vote created by the creator contract
     /// @param auth address of the account used by the authority
     /// @param voteContract address of the instance of contract BinaryVote
-    function newBinaryVote(address auth, address voteContract) onlyCreator() external {
+    function newBinaryVote(address auth, address voteContract)
+        external
+        onlyCreator()
+    {
         bytes32 id = keccak256(abi.encode(auth, voteContract));
 
         voteID[auth].push(id);
@@ -85,7 +93,11 @@ contract VotingContract {
     /// @dev Set public key by the authority
     /// @param id Vote ID
     /// @param _gk Public key
-    function setAuthPubKey(bytes32 id, uint256 _gk, uint8 _gkPrefix) external {
+    function setAuthPubKey(
+        bytes32 id,
+        uint256 _gk,
+        uint8 _gkPrefix
+    ) external {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
@@ -111,12 +123,11 @@ contract VotingContract {
         c.cast(h, y, zkp, prefix);
 
         emit CastBinaryBallot(
-            id, 
-            msg.sender, 
-            keccak256(abi.encode(
-                h, getByteVal(prefix, 5),
-                y, getByteVal(prefix, 4)
-            ))
+            id,
+            msg.sender,
+            keccak256(
+                abi.encode(h, getByteVal(prefix, 5), y, getByteVal(prefix, 4))
+            )
         );
     }
 
@@ -146,7 +157,7 @@ contract VotingContract {
     /// @param id Vote ID
     /// @param nullVoters addresses of the voters whose ballots are invalid
     /// @param V Total number of yes votes
-    /// @param X prod_i(h_i) 
+    /// @param X prod_i(h_i)
     /// @param Y prod_i(y_i)
     /// @param zkp proof of the knowedge of k; zkp = [H, t, r]
     /// @param prefix parity bytes (0x02 even, 0x03 odd) for compressed ec points X | Y | H | t
@@ -165,11 +176,12 @@ contract VotingContract {
         c.setTallyRes(nullVoters, V, X, Y, zkp, prefix);
 
         emit SetTallyRes(
-            id, msg.sender, V, 
-            keccak256(abi.encode(
-                X, getByteVal(prefix, 3),
-                Y, getByteVal(prefix, 2)
-            ))
+            id,
+            msg.sender,
+            V,
+            keccak256(
+                abi.encode(X, getByteVal(prefix, 3), Y, getByteVal(prefix, 2))
+            )
         );
     }
 
@@ -183,7 +195,7 @@ contract VotingContract {
 
         return c.verifyBallot(a);
     }
-    
+
     /// @dev Verify the tally result
     /// @notice After the tally is ended by the authority
     /// @param id Vote ID
@@ -194,9 +206,9 @@ contract VotingContract {
 
         uint256 n = c.getNumNullVoter();
         address a;
-        for(uint256 i = 0; i < n; i++) {
+        for (uint256 i = 0; i < n; i++) {
             a = c.getNullVoter(i);
-            if(c.verifyBallot(a)) {
+            if (c.verifyBallot(a)) {
                 return false;
             }
         }
@@ -240,7 +252,11 @@ contract VotingContract {
     /// @param id Vote ID
     /// @param i Index
     /// @return Account address
-    function getNullVoter(bytes32 id, uint256 i) external view returns (address) {
+    function getNullVoter(bytes32 id, uint256 i)
+        external
+        view
+        returns (address)
+    {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
@@ -291,8 +307,15 @@ contract VotingContract {
         return c.getBallot(a);
     }
 
+    function getState(bytes32 id) external view returns (uint8) {
+        require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
+        BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
+
+        return c.getState();
+    }
+
     function getByteVal(uint256 b, uint256 i) internal pure returns (uint8) {
-        return uint8((b >> i * 8) & 0xff);
+        return uint8((b >> (i * 8)) & 0xff);
     }
 
     event NewBinaryVote(bytes32 indexed id, address indexed from, address addr);
