@@ -7,4 +7,6 @@
 /src/testnet/*.js
 /src/tmp.*
 
+/contracts/test.sol
+
 .DS_Store

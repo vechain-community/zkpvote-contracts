@@ -1,6 +1,8 @@
 import fs = require('fs')
+import BN from 'bn.js'
+
 import { Framework } from '@vechain/connex-framework'
-import { Driver, SimpleNet, SimpleWallet, options } from '@vechain/connex-driver'
+import { Driver, SimpleNet, SimpleWallet } from '@vechain/connex-driver'
 import { utils, connexutils } from 'myvetools'
 
 import { randPower } from '../src/utils'
@@ -13,7 +15,6 @@ import {
     abiVotingContract,
     infoFile
 } from './init'
-import BN = require('bn.js')
 
 (async () => {
     const wallet = new SimpleWallet()
