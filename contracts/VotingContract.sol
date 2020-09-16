@@ -263,7 +263,7 @@ contract VotingContract {
         return c.getNullVoter(i);
     }
 
-    /// @dev Get the number of accounts used to cast ballots are invalidated by the authority
+    /// @dev Get the number of accounts used to cast ballots
     /// @param id Vote ID
     /// @return Number of accounts
     function getNumVoter(bytes32 id) external view returns (uint256) {
