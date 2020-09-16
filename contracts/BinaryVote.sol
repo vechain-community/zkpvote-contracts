@@ -49,6 +49,7 @@ contract BinaryVote {
     address[] private nullVoters; // addresses of the accounts that have cast an invalid ballot
     mapping(address => bool) private checkInvalidBallot; // mapping used to check whether an account has cast an invalid ballot
     TallyRes private tallyRes; // outputs of the tally carried by authority off-chain
+    bool private hasSetTallyRes;
 
     enum State {
         Init,
@@ -82,6 +83,7 @@ contract BinaryVote {
     constructor() public {
         auth = tx.origin;
         state = State.Init;
+        hasSetTallyRes = false;
     }
 
     /// @dev Set compressed public key by the authority
@@ -133,6 +135,7 @@ contract BinaryVote {
 
     /// @dev End tally by the authority
     function endTally() external onlyAuth() inState(State.Tally) {
+        require(hasSetTallyRes, "Tally result not yet set");
         state = State.End;
     }
 
@@ -161,6 +164,7 @@ contract BinaryVote {
         }
 
         tallyRes = TallyRes({V: V, X: X, Y: Y, zkp: zkp, prefix: prefix});
+        hasSetTallyRes = true;
     }
 
     /// @dev Verify a cast ballot
@@ -193,6 +197,8 @@ contract BinaryVote {
     /// @dev Verify the tally result after the tally is ended by the authority
     /// @return true or false
     function verifyTallyRes() external view inState(State.End) returns (bool) {
+        require(hasSetTallyRes, "Tally result not yet set");
+
         if (!verifyHAndY()) {
             return false;
         }
