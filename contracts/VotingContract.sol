@@ -204,6 +204,7 @@ contract VotingContract {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
+        // Verify claimed invalid ballots
         uint256 n = c.getNumNullVoter();
         address a;
         for (uint256 i = 0; i < n; i++) {
@@ -211,6 +212,11 @@ contract VotingContract {
             if (c.verifyBallot(a)) {
                 return false;
             }
+        }
+
+        // If all ballots are invalid
+        if (n == c.getNumVoter()) {
+            return true;
         }
 
         return c.verifyTallyRes();
