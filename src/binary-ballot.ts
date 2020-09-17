@@ -2,6 +2,7 @@ import BN from 'bn.js'
 
 import { prove, Proof, verify } from './zkp-binary-value'
 import { ECP, g, toHex, compress, uncompress } from './ec'
+import { toHex as toHexBN } from './utils'
 
 export type Ballot = {
     h: ECP,
@@ -80,7 +81,7 @@ export function compressBallot(b: Ballot): CompressedBallot {
 export function uncompressBallot(b: CompressedBallot, address: string, gk: ECP): Ballot {
     const { h, y, zkp, prefix } = b
     let pre: ('02' | '03')[] = []
-    const buff = new BN(prefix.slice(2), 16).toBuffer('be') 
+    const buff = new BN(prefix.slice(2), 16).toBuffer('be')
     buff.forEach((v, i) => {
         if (v == 2) {
             pre[i] = '02'
@@ -109,4 +110,28 @@ export function uncompressBallot(b: CompressedBallot, address: string, gk: ECP):
             b2: uncompress(zkp[7], pre[5])
         }
     }
+}
+
+export function print(b: Ballot): string {
+    return `address: ${b.proof.address}
+hx: ${toHex(b.h, 'x')}
+hy: ${toHex(b.h, 'y')}
+yx: ${toHex(b.y, 'x')}
+yy: ${toHex(b.y, 'y')}
+gax: ${toHex(b.proof.ga, 'x')}
+gay: ${toHex(b.proof.ga, 'y')}
+gkx: ${toHex(b.proof.gk, 'x')}
+gky: ${toHex(b.proof.gk, 'y')}
+a1x: ${toHex(b.proof.a1, 'x')}
+a1y: ${toHex(b.proof.a1, 'y')}
+b1x: ${toHex(b.proof.b1, 'x')}
+b1y: ${toHex(b.proof.b1, 'y')}
+a2x: ${toHex(b.proof.a2, 'x')}
+a2y: ${toHex(b.proof.a2, 'y')}
+b2x: ${toHex(b.proof.b2, 'x')}
+b2y: ${toHex(b.proof.b2, 'y')}
+d1: ${toHexBN(b.proof.d1)}
+r1: ${toHexBN(b.proof.r1)}
+d2: ${toHexBN(b.proof.d2)}
+r2: ${toHexBN(b.proof.r2)}`
 }
