@@ -70,16 +70,6 @@ contract BinaryVote {
         _;
     }
 
-    modifier afterState(State _state) {
-        require(state > _state, "Invalid state");
-        _;
-    }
-
-    modifier beforeState(State _state) {
-        require(state < _state, "Invalid state");
-        _;
-    }
-
     constructor() public {
         auth = tx.origin;
         state = State.Init;
@@ -289,20 +279,21 @@ contract BinaryVote {
         return (ballots[a].h, ballots[a].y, ballots[a].zkp, ballots[a].prefix);
     }
 
-    /// @dev Get the total number of valid ballots stored in the contact
-    /// @return total number
-    function getValidBallotNum()
-        external
-        view
-        inState(State.End)
-        returns (uint256)
-    {
-        return voters.length - nullVoters.length;
-    }
-
+    /// @dev Get the current state
+    /// @return state: 0 - INIT; 1 - CAST; 2 - TALLY; 3 - END
     function getState() external view returns (uint8) {
         return uint8(state);
     }
+
+    /// @dev Get the tally result
+    /// @return #total
+    /// @return #invalid
+    /// @return #yes
+    function getTallyRes() external view returns (uint256, uint256, uint256) {
+        require(hasSetTallyRes, "Tally result not yet set");
+
+        return (voters.length, nullVoters.length, tallyRes.V);
+    } 
 
     /// @dev Verify H = prod_i(h_i) and Y = prod_i(y_i)
     /// @return true or false

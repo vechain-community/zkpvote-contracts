@@ -33,6 +33,8 @@ contract BinaryVoteInterface {
 
     function getVoter(uint256 i) external view returns (address);
 
+    function getTallyRes() external view returns (uint256, uint256, uint256);
+
     function getNumNullVoter() external view returns (uint256);
 
     function getNullVoter(uint256 i) external view returns (address);
@@ -308,11 +310,26 @@ contract VotingContract {
         return c.getBallot(a);
     }
 
+    /// @dev Get the current state
+    /// @param id vote id
+    /// @return state: 0 - INIT; 1 - CAST; 2 - TALLY; 3 - END
     function getState(bytes32 id) external view returns (uint8) {
         require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
         BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
 
         return c.getState();
+    }
+
+    /// @dev Get the tally result
+    /// @param id vote id
+    /// @return #total
+    /// @return #invalid
+    /// @return #yes
+    function getTallyRes(bytes32 id) external view returns (uint256, uint256, uint256) {
+        require(uint256(voteAddr[id]) > 0, "Vote ID does not exist");
+        BinaryVoteInterface c = BinaryVoteInterface(voteAddr[id]);
+
+        return c.getTallyRes();
     }
 
     function getByteVal(uint256 b, uint256 i) internal pure returns (uint8) {
