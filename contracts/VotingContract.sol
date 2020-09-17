@@ -214,11 +214,6 @@ contract VotingContract {
             }
         }
 
-        // If all ballots are invalid
-        if (n == c.getNumVoter()) {
-            return true;
-        }
-
         return c.verifyTallyRes();
     }
 

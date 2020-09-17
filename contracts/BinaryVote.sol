@@ -199,6 +199,16 @@ contract BinaryVote {
     function verifyTallyRes() external view inState(State.End) returns (bool) {
         require(hasSetTallyRes, "Tally result not yet set");
 
+        // if there is no ballot cast
+        if (voters.length == 0) {
+            // the number of yes votes must be zero
+            if (tallyRes.V != 0) {
+                return false;
+            }
+            // stop the verification here, no need to go further
+            return true;
+        }
+
         if (!verifyHAndY()) {
             return false;
         }
