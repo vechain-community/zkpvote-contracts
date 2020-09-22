@@ -75,6 +75,7 @@ import {
     console.log('\tgas used:', rec.gasUsed)
 
     fs.writeFileSync(infoFile, JSON.stringify({
+        addrLib: addrLib,
         addrVoteCreator: addrCreator,
         addrVotingContract: addrVoting
     }))
