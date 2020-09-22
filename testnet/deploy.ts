@@ -8,6 +8,7 @@ import {
     accounts,
     binVoteCreator, abiVoteCreator,
     binVotingContract, abiVotingContract,
+    binVoteLib, abiVoteLib,
     infoFile
 } from './init'
 
@@ -17,29 +18,45 @@ import {
 
     const driver = await Driver.connect(new SimpleNet('https://sync-testnet.vechain.org/'), wallet)
     const connex = new Framework(driver)
+    let resp: Connex.Vendor.TxResponse, rec: Connex.Thor.Receipt
 
-    let resp = await connexutils.deployContract(
+    // Deploy binary vote library
+    resp = await connexutils.deployContract(
         connex, accounts[0].pubKey, 10000000, '0x0',
-        binVoteCreator, utils.getABI(abiVoteCreator, '', 'constructor')
+        binVoteLib, utils.getABI(abiVoteLib, '', 'constructor')
     )
-
-    let rec = await connexutils.getReceipt(connex, 5, resp.txid)
-    const addr1 = rec.outputs[0].contractAddress
-    console.log('VoteCreator deployed:')
-    console.log('\tat: ', addr1)
+    rec = await connexutils.getReceipt(connex, 5, resp.txid)
+    const addrLib = rec.outputs[0].contractAddress
+    console.log('Lib deployed:')
+    console.log('\tat: ', addrLib)
     console.log('\tby: ', resp.signer)
     console.log('\ttxid: ', resp.txid)
     console.log('\tgas used:', rec.gasUsed)
 
+    // deploy binary vote creator
+    resp = await connexutils.deployContract(
+        connex, accounts[0].pubKey, 10000000, '0x0',
+        binVoteCreator, utils.getABI(abiVoteCreator, '', 'constructor'),
+        addrLib
+    )
+    rec = await connexutils.getReceipt(connex, 5, resp.txid)
+    const addrCreator = rec.outputs[0].contractAddress
+    console.log('VoteCreator deployed:')
+    console.log('\tat: ', addrCreator)
+    console.log('\tby: ', resp.signer)
+    console.log('\ttxid: ', resp.txid)
+    console.log('\tgas used:', rec.gasUsed)
+
+    // deploy binary voting contract
     resp = await connexutils.deployContract(
         connex, accounts[0].pubKey, 10000000, '0x0',
         binVotingContract, utils.getABI(abiVotingContract, '', 'constructor'),
-        addr1
+        addrCreator
     )
     rec = await connexutils.getReceipt(connex, 5, resp.txid)
-    const addr2 = rec.outputs[0].contractAddress
+    const addrVoting = rec.outputs[0].contractAddress
     console.log('VotingContract deployed:')
-    console.log('\tat: ', addr2)
+    console.log('\tat: ', addrVoting)
     console.log('\tby: ', resp.signer)
     console.log('\ttxid: ', resp.txid)
     console.log('\tgas used:', rec.gasUsed)
@@ -47,9 +64,9 @@ import {
     // Call VoteCreator.setVotingContract
     resp = await connexutils.contractCallWithTx(
         connex, accounts[0].pubKey, 300000,
-        addr1, '0x0',
+        addrCreator, '0x0',
         utils.getABI(abiVoteCreator, 'setVotingContract', 'function'),
-        addr2
+        addrVoting
     )
     rec = await connexutils.getReceipt(connex, 5, resp.txid)
     console.log('Call VoteCreate.setVotingContract')
@@ -58,7 +75,9 @@ import {
     console.log('\tgas used:', rec.gasUsed)
 
     fs.writeFileSync(infoFile, JSON.stringify({
-        addrVoteCreator: addr1,
-        addrVotingContract: addr2
+        addrVoteCreator: addrCreator,
+        addrVotingContract: addrVoting
     }))
+
+    process.exit()
 })()

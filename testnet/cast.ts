@@ -88,4 +88,6 @@ import {
                     })
             })
     }
+
+    process.exit()
 })()

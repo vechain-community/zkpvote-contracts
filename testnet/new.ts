@@ -72,4 +72,6 @@ import { toHex as toHexEC, g } from '../src/ec'
         gkx: gkx,
         gky: gky
     }))
+
+    process.exit()
 })()

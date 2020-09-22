@@ -13,6 +13,9 @@ const accounts: { privKey: string, pubKey: string }[] = [
     { privKey: '0xd8fb043dfc25bb5ea4621668a69f954b6e9810f9c3075eef463fc6b40e5d8189', pubKey: '0x06Abf1999FC0E0A5C26784d8817Df99e7d13b2FC' },
 ];
 
+const binVoteLib = utils.getSolcBin('./contracts/BinaryVote.sol', 'BinaryVote')
+const abiVoteLib = JSON.parse(utils.getSolcABI('./contracts/BinaryVote.sol', 'BinaryVote'))
+
 const binVoteCreator = utils.getSolcBin('./contracts/VoteCreator.sol', 'VoteCreator')
 const abiVoteCreator = JSON.parse(utils.getSolcABI('./contracts/VoteCreator.sol', 'VoteCreator'))
 
@@ -25,5 +28,6 @@ export {
     accounts,
     binVoteCreator, abiVoteCreator,
     binVotingContract, abiVotingContract,
+    binVoteLib, abiVoteLib,
     infoFile,
 }

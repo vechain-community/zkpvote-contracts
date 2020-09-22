@@ -132,4 +132,6 @@ function getCompressedBallot(out: Connex.Thor.VMOutput): CompressedBallot {
     console.log(`Tally ends:
     txid: ${resp.txid}
     gas used: ${rec.gasUsed}`)
+
+    process.exit()
 })()
