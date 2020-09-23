@@ -3,6 +3,7 @@
 
 /test/data/dl-bin-ballot.json
 /test/data/info.json
+/test/data/infoV2.json
 
 /src/testnet/*.js
 /src/tmp.*
