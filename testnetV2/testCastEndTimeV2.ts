@@ -46,7 +46,7 @@ import { Tally, prepTallyRes } from '../src/binary-tally'
 		connex, auth, 10000000,
 		addrVotingContract, '0x0',
 		utils.getABI(abiVotingContract, 'newBinaryVote', 'function'),
-		Math.round((new Date()).getTime()/1000) + castPeriod,
+		Math.round((new Date()).getTime() / 1000) + castPeriod,
 		'0x' + randomBytes(32).toString('hex'),
 		'0x' + randomBytes(32).toString('hex'),
 		'0x' + randomBytes(32).toString('hex'),
@@ -92,20 +92,20 @@ import { Tally, prepTallyRes } from '../src/binary-tally'
 	tally.count(b)
 	const r = prepTallyRes(tally.getRes())
 	resp = await connexutils.contractCallWithTx(
-        connex, auth, 1000000,
-        addrVotingContract, '0x0',
-        utils.getABI(abiVotingContract, 'setTallyRes', 'function'),
-        voteID,
-        r.invalidBallots,
-        r.V, r.X, r.Y, r.zkp, r.prefix
-    )
-    rec = await connexutils.getReceipt(connex, 5, resp.txid)
-    console.log(`Tried to submit tally result:
+		connex, auth, 1000000,
+		addrVotingContract, '0x0',
+		utils.getABI(abiVotingContract, 'setTallyRes', 'function'),
+		voteID,
+		r.invalidBallots,
+		r.V, r.X, r.Y, r.zkp, r.prefix
+	)
+	rec = await connexutils.getReceipt(connex, 5, resp.txid)
+	console.log(`Tried to submit tally result:
 	reverted: ${rec.reverted}
-	at unix time: ${rec.meta.blockTimestamp}`)	
+	at unix time: ${rec.meta.blockTimestamp}`)
 
 	console.log(`Wait for 20 seconds`)
-	await new Promise(resolve => setTimeout(resolve, 20*1000)); // millisecond
+	await new Promise(resolve => setTimeout(resolve, 20 * 1000)); // millisecond
 
 	// Casting a ballot outside the casting period
 	b = randBallot(gkx, gky, accounts[0].pubKey)
@@ -122,30 +122,30 @@ import { Tally, prepTallyRes } from '../src/binary-tally'
 	at unix time: ${rec.meta.blockTimestamp}`)
 
 	resp = await connexutils.contractCallWithTx(
-        connex, auth, 1000000,
-        addrVotingContract, '0x0',
-        utils.getABI(abiVotingContract, 'setTallyRes', 'function'),
-        voteID,
-        r.invalidBallots,
-        r.V, r.X, r.Y, r.zkp, r.prefix
-    )
-    rec = await connexutils.getReceipt(connex, 5, resp.txid)
+		connex, auth, 1000000,
+		addrVotingContract, '0x0',
+		utils.getABI(abiVotingContract, 'setTallyRes', 'function'),
+		voteID,
+		r.invalidBallots,
+		r.V, r.X, r.Y, r.zkp, r.prefix
+	)
+	rec = await connexutils.getReceipt(connex, 5, resp.txid)
 	console.log(`Tried to submit tally result:
 	reverted: ${rec.reverted}
 	at unix time: ${rec.meta.blockTimestamp}`)
 
 	// Tally ends
-    resp = await connexutils.contractCallWithTx(
-        connex, auth, 100000,
-        addrVotingContract, '0x0',
-        utils.getABI(abiVotingContract, 'endTally', 'function'),
-        voteID
-    )
-    rec = await connexutils.getReceipt(connex, 5, resp.txid)
+	resp = await connexutils.contractCallWithTx(
+		connex, auth, 100000,
+		addrVotingContract, '0x0',
+		utils.getABI(abiVotingContract, 'endTally', 'function'),
+		voteID
+	)
+	rec = await connexutils.getReceipt(connex, 5, resp.txid)
 	console.log(`Tally ends:
 	reverted: ${rec.reverted}
 	at unix time: ${rec.meta.blockTimestamp}`)
-	
+
 	process.exit()
 })()
 

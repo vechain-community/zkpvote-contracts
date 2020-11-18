@@ -14,17 +14,21 @@ const accounts: { privKey: string, pubKey: string }[] = [
     { privKey: '0xd8fb043dfc25bb5ea4621668a69f954b6e9810f9c3075eef463fc6b40e5d8189', pubKey: '0x06Abf1999FC0E0A5C26784d8817Df99e7d13b2FC' },
 ];
 
-const voteLibFile: string = function() {
+const root: string = function () {
     let dirs = __dirname.split(path.sep)
-    dirs = dirs.slice(0, dirs.length-1) 
-    return path.join(path.sep, ...dirs, '/contractV2/BinaryVoteV2.sol')
+    let i = 0
+    for (; ;) {
+        if (dirs[i] === 'zkVoteContract') {
+            break
+        }
+        i++
+    }
+    dirs = dirs.slice(0, i + 1)
+    return path.join(path.sep, ...dirs)
 }()
 
-const votingContractFile: string = function() {
-    let dirs = __dirname.split(path.sep)
-    dirs = dirs.slice(0, dirs.length-1) 
-    return path.join(path.sep, ...dirs, '/contractV2/VotingContractV2.sol')
-}()
+const voteLibFile = root + '/contractV2/BinaryVoteV2.sol'
+const votingContractFile = root + '/contractV2/VotingContractV2.sol'
 
 const binVoteLib = utils.getSolcBin(voteLibFile, 'BinaryVoteV2')
 const abiVoteLib = JSON.parse(utils.getSolcABI(voteLibFile, 'BinaryVoteV2'))
@@ -32,7 +36,7 @@ const abiVoteLib = JSON.parse(utils.getSolcABI(voteLibFile, 'BinaryVoteV2'))
 const binVotingContract = utils.getSolcBin(votingContractFile, 'VotingContractV2')
 const abiVotingContract = JSON.parse(utils.getSolcABI(votingContractFile, 'VotingContractV2'))
 
-const infoFile = './test/data/infoV2.json'
+const infoFile = root + '/test/data/infoV2.json'
 
 export {
     accounts,

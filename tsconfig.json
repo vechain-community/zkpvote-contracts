@@ -9,13 +9,9 @@
     "exclude": [
         "node_modules",
         "dist",
-        "archive/testnet",
-        "testnetV2"
     ],
     "include": [
-        "src"
+        "src",
+        "testnetV2",
     ],
-    "files": [
-        "testnetV2/utils.ts"
-    ]
 }
