@@ -3,8 +3,19 @@
         "module": "commonjs",
         "target": "ES6",
         "esModuleInterop": true,
+        "declaration": true,
+        "outDir": "dist",
     },
     "exclude": [
         "node_modules",
+        "dist",
+        "archive/testnet",
+        "testnetV2"
+    ],
+    "include": [
+        "src"
+    ],
+    "files": [
+        "testnetV2/utils.ts"
     ]
-}   
+}

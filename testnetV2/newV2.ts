@@ -15,6 +15,8 @@ import { pre } from './utils'
 import { randPower, toHex as toHexBN } from '../src/utils'
 import { toHex as toHexEC, g } from '../src/ec'
 
+import { randomBytes } from 'crypto'
+
 (async () => {
     const wallet = new SimpleWallet()
     wallet.import(accounts[0].privKey)
@@ -30,7 +32,11 @@ import { toHex as toHexEC, g } from '../src/ec'
     let resp = await connexutils.contractCallWithTx(
         connex, auth, 10000000,
         addrVotingContract, '0x0',
-        utils.getABI(abiVotingContract, 'newBinaryVote', 'function')
+        utils.getABI(abiVotingContract, 'newBinaryVote', 'function'),
+        Math.round((new Date()).getTime()/1000) + 1000,
+        '0x' + randomBytes(32).toString('hex'),
+        '0x' + randomBytes(32).toString('hex'),
+        '0x' + randomBytes(32).toString('hex'),
     )
     let rec = await connexutils.getReceipt(connex, 5, resp.txid)
     const voteID = rec.outputs[0].events[0].topics[1]

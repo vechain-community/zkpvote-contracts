@@ -9,5 +9,6 @@
 /src/tmp.*
 
 /contracts/test.sol
+/dist/
 
 .DS_Store

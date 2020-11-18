@@ -1,4 +1,5 @@
 import { utils } from 'myvetools'
+const path = require('path')
 
 const accounts: { privKey: string, pubKey: string }[] = [
     { privKey: '0x3e61996a0a49b26a5608a55a3e0669aff271959d2e43658766e3514a07a5ccf3', pubKey: '0xCDFDFD58e986130445B560276f52CE7985809238' },
@@ -13,13 +14,23 @@ const accounts: { privKey: string, pubKey: string }[] = [
     { privKey: '0xd8fb043dfc25bb5ea4621668a69f954b6e9810f9c3075eef463fc6b40e5d8189', pubKey: '0x06Abf1999FC0E0A5C26784d8817Df99e7d13b2FC' },
 ];
 
-const binVoteLib = utils.getSolcBin('./contractV2/BinaryVoteV2.sol', 'BinaryVoteV2')
-const abiVoteLib = JSON.parse(utils.getSolcABI('./contractV2/BinaryVoteV2.sol', 'BinaryVoteV2'))
+const voteLibFile: string = function() {
+    let dirs = __dirname.split(path.sep)
+    dirs = dirs.slice(0, dirs.length-1) 
+    return path.join(path.sep, ...dirs, '/contractV2/BinaryVoteV2.sol')
+}()
 
-const binVotingContract = utils.getSolcBin('./contractV2/VotingContractV2.sol', 'VotingContractV2')
-const abiVotingContract = JSON.parse(
-    utils.getSolcABI('./contractV2/VotingContractV2.sol', 'VotingContractV2')
-)
+const votingContractFile: string = function() {
+    let dirs = __dirname.split(path.sep)
+    dirs = dirs.slice(0, dirs.length-1) 
+    return path.join(path.sep, ...dirs, '/contractV2/VotingContractV2.sol')
+}()
+
+const binVoteLib = utils.getSolcBin(voteLibFile, 'BinaryVoteV2')
+const abiVoteLib = JSON.parse(utils.getSolcABI(voteLibFile, 'BinaryVoteV2'))
+
+const binVotingContract = utils.getSolcBin(votingContractFile, 'VotingContractV2')
+const abiVotingContract = JSON.parse(utils.getSolcABI(votingContractFile, 'VotingContractV2'))
 
 const infoFile = './test/data/infoV2.json'
 
@@ -27,5 +38,5 @@ export {
     accounts,
     binVotingContract, abiVotingContract,
     binVoteLib, abiVoteLib,
-    infoFile,
+    infoFile
 }

@@ -1,14 +1,8 @@
-const EllipticCurve = artifacts.require("EllipticCurve")
-// const BinaryVote = artifacts.require("BinaryVote");
-const VoteCreator = artifacts.require("VoteCreator.sol");
-const VotingContract = artifacts.require("VotingContract");
+const BinaryVote = artifacts.require("BinaryVoteV2");
+const VotingContract = artifacts.require("VotingContractV2");
 
 module.exports = function (deployer) {
-    // deployer.deploy(EllipticCurve)
-    // .then(() => EllipticCurve.deployed())
-    // .then(() => deployer.deploy(VoteCreator, EllipticCurve.address))
-    deployer.deploy(VoteCreator)
-    .then(() => VoteCreator.deployed())
-    .then(() => deployer.deploy(VotingContract, VoteCreator.address))
-    .then(() => VotingContract.deployed());
+    deployer.deploy(BinaryVote)
+        .then(() => BinaryVote.deployed())
+        .then(() => deployer.deploy(VotingContract, BinaryVote.address));
 };

@@ -14,7 +14,7 @@ contract("VotingContract", async (accounts) => {
         //////////////////////////////
         // New binary vote
         //////////////////////////////
-        let tx = await cr.newBinaryVote();
+        let tx = await cr.newBinaryVote(); 
 
         const auth = tx.logs[0].args.from;
         const addr = tx.logs[0].args.voteContract;
